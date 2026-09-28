@@ -138,6 +138,12 @@ venv/bin/python Gemini/src/compare_budgets.py --trials 100 --N 512 --s 10 --m 12
 venv/bin/python Gemini/src/compare_jl_hierarchy.py --trials 100 --N 512 --s 10 --m 120 --eps 0.20 --snr 25.0
 ```
 
+### Stage 6b: Candidate Error Separation vs Pairwise Ordering Reversal
+```bash
+# Quantifies reversal probability P(Reversal | Delta_rel) where Delta_rel = |E_i - E_j| / min(E_i, E_j)
+venv/bin/python Gemini/src/analyze_separation_reversal.py --trials 50 --N 512 --s 10 --m 120 --r 40 --snr 25.0
+```
+
 ### Stage 7: 2D Phase Transition Heatmaps and Scaling
 ```bash
 # Computes 63-cell (q, r) phase diagram + N & s scaling sweep (Generates heatmap_selection_accuracy.png, heatmap_kendall_tau.png, heatmap_regime_scaling.png)
@@ -161,14 +167,15 @@ venv/bin/python Gemini/src/export_report.py
 | [`three_notions_vs_sparsity.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/three_notions_vs_sparsity.png) / `.pdf` | 4-panel comparison of Norm Error vs Ordering vs Selection vs Hierarchy Retention |
 | [`matrix_families_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/matrix_families_comparison.png) / `.pdf` | Comparison of Gaussian vs Rademacher vs Sparse Rademacher verifying kurtosis $\gamma$ |
 | [`budget_matched_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/budget_matched_comparison.png) / `.pdf` | The "Wide-and-Sparse" advantage at fixed FLOP budget $\operatorname{nnz}(\Psi)$ |
-| [`jl_hierarchy_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/jl_hierarchy_comparison.png) / `.pdf` | 4-level hierarchy success rates and required measurement budget comparison |
+| [`jl_hierarchy_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/jl_hierarchy_comparison.png) / `.pdf` | 5-level hierarchy success rates including Rachel Ward's bound and required measurement budget comparison |
+| [`pairwise_reversal_vs_separation.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/pairwise_reversal_vs_separation.png) / `.pdf` | Pairwise reversal probability vs candidate error separation $\Delta_{\text{rel}} = \frac{\|E_i - E_j\|}{\min(E_i, E_j)}$ |
 | [`heatmap_selection_accuracy.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_selection_accuracy.png) / `.pdf` | 2D $(q, r) \mapsto \text{Accuracy}$ contour phase map for Exact and Near Selection |
 | [`heatmap_kendall_tau.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_kendall_tau.png) / `.pdf` | 2D $(q, r) \mapsto \tau$ contour phase map for rank correlation |
 | [`heatmap_regime_scaling.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_regime_scaling.png) / `.pdf` | Scaling curves across dimensions $N \in \{256, 512, 1024\}$ and sparsities $s \in \{5, 10, 20\}$ |
 | [`table_three_notions.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_three_notions.tex) | Publication LaTeX table for Stage 3 validation hierarchy metrics |
 | [`table_matrix_families.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_matrix_families.tex) | Publication LaTeX table for Stage 4 matrix family accuracy and kurtosis variance |
 | [`table_budget_matched.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_budget_matched.tex) | Publication LaTeX table for Stage 5 iso-compute non-zero budget comparison |
-| [`table_jl_hierarchy.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_jl_hierarchy.tex) | Publication LaTeX table for Stage 6 4-level task hierarchy success rates |
+| [`table_jl_hierarchy.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_jl_hierarchy.tex) | Publication LaTeX table for Stage 6 5-level task hierarchy success rates |
 | [`table_phase_map.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_phase_map.tex) | Publication LaTeX table for Stage 7 2D $(q, r)$ phase transition matrix |
 | [`executive_report_summary.json`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/executive_report_summary.json) | Consolidated JSON metric snapshot of all experimental stages for programmatic reporting |
 | `*.csv` | Structured data tables containing numerical trial records and summary aggregations |
