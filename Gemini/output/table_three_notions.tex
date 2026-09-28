@@ -1,0 +1,22 @@
+% Stage 3: Three Notions of Performance across Sparsity q
+\begin{table}[htbp]
+\centering
+\small
+\caption{Validation Hierarchy Metrics vs Matrix Density $q$ ($N=512, s=10, m=120, r=40$)}
+\label{tab:three_notions}
+\begin{tabular}{rrcrrrr}
+\toprule
+Density $q$ & $\mathrm{nnz}/\mathrm{row}$ & JL Success ($\varepsilon=0.2$) & Dist. Std $\sigma$ & Pre-Conv Rel Err & Kendall's $\tau$ & Best-Iterate Acc \\
+\midrule
+ 1.00 & 512.0 &  68.9\% & 0.164 &  18.3\% & 0.908 &  71.0\% \\
+ 0.70 & 358.4 &  67.6\% & 0.164 &  18.7\% & 0.897 &  79.0\% \\
+ 0.50 & 256.0 &  64.9\% & 0.174 &  20.0\% & 0.904 &  66.0\% \\
+ 0.30 & 153.6 &  63.3\% & 0.177 &  20.2\% & 0.908 &  77.0\% \\
+ 0.20 & 102.4 &  59.9\% & 0.199 &  23.3\% & 0.915 &  75.0\% \\
+ 0.10 &  51.2 &  53.1\% & 0.228 &  26.5\% & 0.909 &  70.0\% \\
+ 0.05 &  25.6 &  43.4\% & 0.317 &  35.3\% & 0.879 &  67.0\% \\
+ 0.02 &  10.2 &  35.5\% & 0.431 &  50.3\% & 0.847 &  55.0\% \\
+ 0.01 &   5.1 &  22.1\% & 0.599 &  74.1\% & 0.739 &  37.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}

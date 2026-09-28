@@ -1,0 +1,20 @@
+% Stage 5: Fixed Non-zero Budget (Wide-and-Sparse vs Narrow-and-Dense)
+\begin{table}[htbp]
+\centering
+\small
+\caption{Model Selection Accuracy (\%) at Constant Non-zero Budget $B = \mathrm{nnz}(\Psi)$}
+\label{tab:budget_matched}
+\begin{tabular}{rcrrrrr}
+\toprule
+Budget $B$ & Dense Equiv. $B/N$ & Dense ($q=1.0$) & $q=0.50$ & $q=0.20$ & $q=0.10$ & Ultra-Sparse ($q=0.05$) \\
+\midrule
+ 5120 & $r=10$ &  34.0\% &  62.0\% &  80.0\% &  90.0\% & \textbf{ 98.0\%} \\
+ 7680 & $r=15$ &  54.0\% &  67.0\% &  85.0\% &  93.0\% & \textbf{ 97.0\%} \\
+10240 & $r=20$ &  55.0\% &  67.0\% &  86.0\% &  94.0\% & \textbf{ 97.0\%} \\
+15360 & $r=30$ &  55.0\% &  88.0\% &  91.0\% &  98.0\% & \textbf{ 98.0\%} \\
+20480 & $r=40$ &  75.0\% &  85.0\% &  90.0\% &  98.0\% & \textbf{ 98.0\%} \\
+30720 & $r=60$ &  80.0\% &  92.0\% &  98.0\% &  99.0\% & \textbf{ 99.0\%} \\
+40960 & $r=80$ &  87.0\% &  99.0\% &  99.0\% & 100.0\% & \textbf{100.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
