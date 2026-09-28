@@ -176,3 +176,77 @@ def jl_distortion_violation_rate(
     violations = np.sum((ratios < (1.0 - epsilon)) | (ratios > (1.0 + epsilon)))
 
     return float(violations / len(error_vectors))
+
+
+def jl_isometry_stats(
+    error_vectors: np.ndarray,
+    Psi: np.ndarray,
+    epsilons: tuple[float, ...] = (0.2, 0.5),
+) -> dict:
+    """
+    Compute classical Johnson-Lindenstrauss distortion statistics on a set of vectors.
+
+    Returns:
+    --------
+    dict containing:
+        - "mean_ratio": mean of ||Psi @ e||_2^2 / ||e||_2^2
+        - "std_ratio": standard deviation of ratio (measures spread / tail risk)
+        - "success_rates": dict mapping epsilon to success rate (fraction within 1 +/- epsilon)
+    """
+    if len(error_vectors) == 0:
+        return {"mean_ratio": 1.0, "std_ratio": 0.0, "success_rates": {eps: 1.0 for eps in epsilons}}
+
+    true_sq_norms = np.sum(error_vectors ** 2, axis=1)
+    nonzero_mask = true_sq_norms > 1e-12
+    if not np.any(nonzero_mask):
+        return {"mean_ratio": 1.0, "std_ratio": 0.0, "success_rates": {eps: 1.0 for eps in epsilons}}
+
+    error_vectors = error_vectors[nonzero_mask]
+    true_sq_norms = true_sq_norms[nonzero_mask]
+
+    projected = error_vectors @ Psi.T
+    proj_sq_norms = np.sum(projected ** 2, axis=1)
+    ratios = proj_sq_norms / true_sq_norms
+
+    success_rates = {}
+    for eps in epsilons:
+        in_bounds = (ratios >= (1.0 - eps)) & (ratios <= (1.0 + eps))
+        success_rates[eps] = float(np.mean(in_bounds))
+
+    return {
+        "mean_ratio": float(np.mean(ratios)),
+        "std_ratio": float(np.std(ratios)),
+        "median_ratio": float(np.median(ratios)),
+        "success_rates": success_rates,
+    }
+
+
+def noise_corrected_cv_errors(
+    Psi: np.ndarray,
+    y_cv: np.ndarray,
+    iterates: np.ndarray,
+    sigma_noise: float = 0.0,
+) -> np.ndarray:
+    """
+    Compute noise-corrected CV error estimates:
+    E_hat_corrected_j = max(0, E_hat_j - sigma_noise^2)
+    This removes the additive noise floor bias at late iterations.
+    """
+    raw_errors = compute_cv_errors(Psi, y_cv, iterates)
+    corrected = np.maximum(0.0, raw_errors - (sigma_noise ** 2))
+    return corrected
+
+
+def pre_convergence_relative_errors(
+    E_true: np.ndarray,
+    E_hat: np.ndarray,
+    j_star: int,
+    eps: float = 1e-12,
+) -> np.ndarray:
+    """
+    Compute relative error restricted to the pre-convergence regime (j <= j_star),
+    where true signal error strictly dominates the noise floor.
+    """
+    j_cutoff = max(1, min(j_star + 1, len(E_true)))
+    return relative_norm_errors(E_true[:j_cutoff], E_hat[:j_cutoff], eps=eps)
+
