@@ -98,6 +98,7 @@ PartIIProject/
 - `pre_convergence_relative_errors(E_true, E_hat, j_star)`: Relative error restricted to $j \le j^*$ (avoids noise floor).
 - `kendall_tau(E_true, E_hat)` & `pairwise_concordance(E_true, E_hat)`: Measures rank correlation and pairwise monotonicity.
 - `best_iterate_selection(E_true, E_hat)`: Evaluates exact match $\mathbf{1}[\hat{j} == j^*]$, near match $|\hat{j} - j^*| \le 1$, and excess oracle error.
+- `ward_bound_stats(E_true, E_hat)`: Evaluates Rachel Ward's (2009) theoretical cross-validation bounds ($4/5 \|\Psi \mathbf{e}^j\|_2 \le \|\mathbf{e}^j\|_2 \le 4/3 \|\Psi \mathbf{e}^j\|_2$) across all iterates.
 - `jl_isometry_stats(error_vectors, Psi, epsilons=(0.2, 0.5))`: Tests classical $(1 \pm \varepsilon)$ isometry and distortion spread $\operatorname{Std}(\|\Psi \mathbf{e}\|^2 / \|\mathbf{e}\|^2)$.
 
 ---

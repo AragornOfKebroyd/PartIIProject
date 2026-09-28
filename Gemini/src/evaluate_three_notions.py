@@ -31,6 +31,7 @@ from metrics import (
     pairwise_concordance,
     best_iterate_selection,
     jl_isometry_stats,
+    ward_bound_stats,
 )
 
 
@@ -92,11 +93,15 @@ def evaluate_three_notions(
         sel = best_iterate_selection(E_true, E_hat_g)
         jl_stats = jl_isometry_stats(error_vectors, Psi_g, epsilons=(0.2, 0.5))
         pre_rel = pre_convergence_relative_errors(E_true, E_hat_g, sel["j_true_star"])
+        proj_error_g_sq = np.sum((error_vectors @ Psi_g.T) ** 2, axis=1)
+        ward_g = ward_bound_stats(E_true, proj_error_g_sq)
 
         gauss_records.append({
             "jl_eps20": jl_stats["success_rates"][0.2],
             "jl_eps50": jl_stats["success_rates"][0.5],
             "jl_std": jl_stats["std_ratio"],
+            "ward_success": ward_g["ward_simultaneous_success"],
+            "ward_fraction": ward_g["ward_fraction_satisfied"],
             "pre_rel_med": float(np.median(pre_rel)),
             "tau": kendall_tau(E_true, E_hat_g),
             "conc": pairwise_concordance(E_true, E_hat_g),
@@ -109,6 +114,8 @@ def evaluate_three_notions(
         "jl_eps20": float(df_gauss["jl_eps20"].mean()),
         "jl_eps50": float(df_gauss["jl_eps50"].mean()),
         "jl_std": float(df_gauss["jl_std"].mean()),
+        "ward_success": float(df_gauss["ward_success"].mean()),
+        "ward_fraction": float(df_gauss["ward_fraction"].mean()),
         "pre_rel": float(df_gauss["pre_rel_med"].median()),
         "tau": float(df_gauss["tau"].mean()),
         "conc": float(df_gauss["conc"].mean()),
@@ -132,6 +139,10 @@ def evaluate_three_notions(
             # Classical JL metrics on actual error vectors
             jl_stats = jl_isometry_stats(error_vectors, Psi, epsilons=(0.2, 0.5))
 
+            # Rachel Ward (2009) theoretical cross-validation error bounds (4/5 <= ||e|| / ||Psi e|| <= 4/3)
+            proj_error_sq = np.sum((error_vectors @ Psi.T) ** 2, axis=1)
+            ward_res = ward_bound_stats(E_true, proj_error_sq)
+
             # Pre-convergence relative error (avoids noise floor dominating the median)
             pre_rel = pre_convergence_relative_errors(E_true, E_hat, sel["j_true_star"])
 
@@ -148,6 +159,8 @@ def evaluate_three_notions(
                 "jl_eps20_success": jl_stats["success_rates"][0.2],
                 "jl_eps50_success": jl_stats["success_rates"][0.5],
                 "jl_distortion_std": jl_stats["std_ratio"],
+                "ward_success": ward_res["ward_simultaneous_success"],
+                "ward_fraction": ward_res["ward_fraction_satisfied"],
                 "pre_conv_rel_error": float(np.median(pre_rel)),
                 "full_rel_error_med": float(np.median(full_rel)),
                 "kendall_tau": tau,
@@ -174,6 +187,9 @@ def evaluate_three_notions(
             "JL_Success_Eps20": float(sub["jl_eps20_success"].mean()),
             "JL_Success_Eps50": float(sub["jl_eps50_success"].mean()),
             "JL_Distortion_Std": float(sub["jl_distortion_std"].mean()),
+            # Ward Bounds (4/5 <= ||e|| / ||Psi e|| <= 4/3)
+            "Ward_Bound_Success": float(sub["ward_success"].mean()),
+            "Ward_Bound_Fraction": float(sub["ward_fraction"].mean()),
             # Norm Estimation (Pre-convergence and Full)
             "PreConv_Rel_Error_Median": float(sub["pre_conv_rel_error"].median()),
             "PreConv_Rel_Error_IQR25": float(np.percentile(sub["pre_conv_rel_error"], 25)),
@@ -198,7 +214,7 @@ def evaluate_three_notions(
     print("STAGE 3 REFINED SUMMARY TABLE:")
     print("=" * 90)
     display_cols = [
-        "q", "nnz_per_row", "JL_Success_Eps20", "JL_Distortion_Std",
+        "q", "nnz_per_row", "JL_Success_Eps20", "Ward_Bound_Success", "JL_Distortion_Std",
         "PreConv_Rel_Error_Median", "Mean_Kendall_Tau", "Selection_Accuracy", "Near_Selection_Accuracy"
     ]
     print(df_summary[display_cols].to_string(index=False))
@@ -269,11 +285,13 @@ def evaluate_three_notions(
     # Panel 4: The Hierarchy Comparison (Retention Relative to Dense Matrix)
     # Relative performance normalized to q=1.0
     base_jl = df_summary[df_summary["q"] == 1.0]["JL_Success_Eps20"].values[0]
+    base_ward = df_summary[df_summary["q"] == 1.0]["Ward_Bound_Success"].values[0]
     base_pre_rel = df_summary[df_summary["q"] == 1.0]["PreConv_Rel_Error_Median"].values[0]
     base_tau = df_summary[df_summary["q"] == 1.0]["Mean_Kendall_Tau"].values[0]
     base_acc = df_summary[df_summary["q"] == 1.0]["Selection_Accuracy"].values[0]
 
     jl_retention = df_summary["JL_Success_Eps20"] / base_jl
+    ward_retention = df_summary["Ward_Bound_Success"] / max(1e-6, base_ward)
     norm_retention = (1.0 / (1.0 + df_summary["PreConv_Rel_Error_Median"])) / (1.0 / (1.0 + base_pre_rel))
     tau_retention = df_summary["Mean_Kendall_Tau"] / base_tau
     acc_retention = df_summary["Selection_Accuracy"] / base_acc
@@ -281,6 +299,7 @@ def evaluate_three_notions(
     ax_hierarchy.plot(df_summary["q"], acc_retention, "o-", color="darkblue", linewidth=2.5, label="Level 4: Best-Iterate Selection")
     ax_hierarchy.plot(df_summary["q"], tau_retention, "s-", color="forestgreen", linewidth=2.2, label=r"Level 3: Kendall's $\tau$ (Ordering)")
     ax_hierarchy.plot(df_summary["q"], norm_retention, "^--", color="purple", linewidth=2.0, label="Level 2: Norm Estimation Retention")
+    ax_hierarchy.plot(df_summary["q"], ward_retention, "v-", color="darkorange", linewidth=2.0, label="Level 2b: Ward Bound (4/5..4/3)")
     ax_hierarchy.plot(df_summary["q"], jl_retention, "x-.", color="darkred", linewidth=2.2, label=r"Level 1: General JL Isometry ($\varepsilon=0.2$)")
 
     ax_hierarchy.set_xscale("log")
@@ -288,7 +307,7 @@ def evaluate_three_notions(
     ax_hierarchy.set_ylabel("Retention Factor Relative to Dense ($q=1.0$)", fontsize=11)
     ax_hierarchy.set_title("The Hierarchy of Validation Requirements", fontsize=12, fontweight="bold")
     ax_hierarchy.grid(True, which="both", linestyle="--", alpha=0.4)
-    ax_hierarchy.legend(fontsize=9, loc="lower left")
+    ax_hierarchy.legend(fontsize=8.5, loc="lower left")
 
     fig.subplots_adjust(left=0.07, right=0.93, top=0.93, bottom=0.08, hspace=0.30, wspace=0.28)
     plot_path = os.path.join(output_dir, "three_notions_vs_sparsity.png")

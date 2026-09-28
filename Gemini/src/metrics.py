@@ -250,3 +250,64 @@ def pre_convergence_relative_errors(
     j_cutoff = max(1, min(j_star + 1, len(E_true)))
     return relative_norm_errors(E_true[:j_cutoff], E_hat[:j_cutoff], eps=eps)
 
+
+def ward_bound_stats(
+    E_true: np.ndarray,
+    E_hat: np.ndarray,
+    eps: float = 1e-12,
+    lower_factor: float = 4.0 / 5.0,
+    upper_factor: float = 4.0 / 3.0,
+) -> dict:
+    """
+    Evaluate Rachel Ward's (2009) compressed sensing cross-validation theoretical bounds:
+    For any iterate j, the true error norm is bounded by:
+        lower_factor * ||Psi e^j||_2 <= ||e^j||_2 <= upper_factor * ||Psi e^j||_2
+    where lower_factor = 4/5 (0.80) and upper_factor = 4/3 (~1.333).
+
+    In terms of estimated and true squared errors (E_hat_j and E_j):
+        (3/4)^2 * E_j = 0.5625 * E_j <= E_hat_j <= 1.5625 * E_j = (5/4)^2 * E_j.
+
+    Parameters:
+    -----------
+    E_true : np.ndarray of shape (p + 1,)
+        True squared reconstruction errors ||e^j||_2^2.
+    E_hat : np.ndarray of shape (p + 1,)
+        Estimated squared errors ||Psi e^j||_2^2.
+    eps : float
+        Numerical zero threshold to ignore near-zero errors.
+
+    Returns:
+    --------
+    dict containing:
+        - "ward_simultaneous_success": bool (True if bound holds across ALL non-trivial iterates)
+        - "ward_fraction_satisfied": float (fraction of iterates satisfying the bound)
+        - "per_iterate_satisfied": list[bool]
+        - "norm_ratios": np.ndarray (||Psi e^j||_2 / ||e^j||_2)
+    """
+    # Non-trivial iterates where true error is positive
+    valid_mask = E_true > eps
+    if not np.any(valid_mask):
+        return {
+            "ward_simultaneous_success": True,
+            "ward_fraction_satisfied": 1.0,
+            "per_iterate_satisfied": [],
+            "norm_ratios": np.array([]),
+        }
+
+    e_true_norms = np.sqrt(E_true[valid_mask])
+    e_hat_norms = np.sqrt(np.maximum(0.0, E_hat[valid_mask]))
+
+    # Ward's exact condition: (4/5) * ||Psi e^j|| <= ||e^j|| <= (4/3) * ||Psi e^j||
+    in_ward_bounds = (e_true_norms >= lower_factor * e_hat_norms) & (
+        e_true_norms <= upper_factor * e_hat_norms
+    )
+
+    norm_ratios = e_hat_norms / np.maximum(e_true_norms, eps)
+
+    return {
+        "ward_simultaneous_success": bool(np.all(in_ward_bounds)),
+        "ward_fraction_satisfied": float(np.mean(in_ward_bounds)),
+        "per_iterate_satisfied": in_ward_bounds.tolist(),
+        "norm_ratios": norm_ratios,
+    }
+

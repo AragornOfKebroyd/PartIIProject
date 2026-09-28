@@ -1,6 +1,6 @@
 {
   "title": "Compressed Sensing Cross-Validation with Sparse Projection Matrices",
-  "timestamp": "2026-09-28 16:29:05",
+  "timestamp": "2026-09-28 17:14:18",
   "key_takeaways": {
     "hierarchy": "General JL Isometry drops to 22% at q=0.01, yet Model Selection retains 77-88% accuracy down to q=0.05.",
     "budget_matching": "At equal non-zero budget B=5120, a wide-and-sparse matrix (q=0.05, r=200) achieves 98.0% selection accuracy vs 34.0% for narrow-and-dense (q=1.0, r=10).",

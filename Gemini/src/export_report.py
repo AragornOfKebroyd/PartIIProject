@@ -44,10 +44,11 @@ def generate_latex_tables(output_dir: str | None = None) -> dict[str, str]:
             f.write("\\begin{table}[htbp]\n\\centering\n\\small\n")
             f.write("\\caption{Validation Hierarchy Metrics vs Matrix Density $q$ ($N=512, s=10, m=120, r=40$)}\n")
             f.write("\\label{tab:three_notions}\n")
-            f.write("\\begin{tabular}{rrcrrrr}\n\\toprule\n")
-            f.write("Density $q$ & $\\mathrm{nnz}/\\mathrm{row}$ & JL Success ($\\varepsilon=0.2$) & Dist. Std $\\sigma$ & Pre-Conv Rel Err & Kendall's $\\tau$ & Best-Iterate Acc \\\\\n\\midrule\n")
+            f.write("\\begin{tabular}{rrcrrrrr}\n\\toprule\n")
+            f.write("Density $q$ & $\\mathrm{nnz}/\\mathrm{row}$ & JL Success ($\\varepsilon=0.2$) & Ward Bound ($4/5..4/3$) & Dist. Std $\\sigma$ & Pre-Conv Rel Err & Kendall's $\\tau$ & Best-Iterate Acc \\\\\n\\midrule\n")
             for _, row in df3.iterrows():
-                f.write(f"{row['q']:5.2f} & {row['nnz_per_row']:5.1f} & {row['JL_Success_Eps20']*100:5.1f}\\% & {row['JL_Distortion_Std']:5.3f} & {row['PreConv_Rel_Error_Median']*100:5.1f}\\% & {row['Mean_Kendall_Tau']:5.3f} & {row['Selection_Accuracy']*100:5.1f}\\% \\\\\n")
+                ward_val = f"{row['Ward_Bound_Success']*100:5.1f}\\%" if "Ward_Bound_Success" in row else "N/A"
+                f.write(f"{row['q']:5.2f} & {row['nnz_per_row']:5.1f} & {row['JL_Success_Eps20']*100:5.1f}\\% & {ward_val} & {row['JL_Distortion_Std']:5.3f} & {row['PreConv_Rel_Error_Median']*100:5.1f}\\% & {row['Mean_Kendall_Tau']:5.3f} & {row['Selection_Accuracy']*100:5.1f}\\% \\\\\n")
             f.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
         tex_files["stage3"] = tex_path
 
@@ -70,9 +71,9 @@ def generate_latex_tables(output_dir: str | None = None) -> dict[str, str]:
                 acc_dr = piv_acc.loc[r_val, "Dense Rademacher"] if "Dense Rademacher" in piv_acc.columns else 0.0
                 std_dr = piv_std.loc[r_val, "Dense Rademacher"] if "Dense Rademacher" in piv_std.columns else 0.0
                 acc_dg = piv_acc.loc[r_val, "Dense Gaussian"] if "Dense Gaussian" in piv_acc.columns else 0.0
-                std_dg = piv_std.loc[r_val, "Dense Gaussian"] if "Dense Gaussian" in piv_std.columns else 0.0
+                std_dg = piv_std.loc[r_val, "Dense Gaussian"] if "Dense Gaussian" in piv_acc.columns else 0.0
                 acc_sr = piv_acc.loc[r_val, "Sparse Rad (q=0.05)"] if "Sparse Rad (q=0.05)" in piv_acc.columns else 0.0
-                std_sr = piv_std.loc[r_val, "Sparse Rad (q=0.05)"] if "Sparse Rad (q=0.05)" in piv_std.columns else 0.0
+                std_sr = piv_std.loc[r_val, "Sparse Rad (q=0.05)"] if "Sparse Rad (q=0.05)" in piv_acc.columns else 0.0
                 f.write(f"{r_val:3d} & {acc_dr:5.1f}\\% & {std_dr:5.3f} & {acc_dg:5.1f}\\% & {std_dg:5.3f} & {acc_sr:5.1f}\\% & {std_sr:5.3f} \\\\\n")
             f.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
         tex_files["stage4"] = tex_path
@@ -107,14 +108,15 @@ def generate_latex_tables(output_dir: str | None = None) -> dict[str, str]:
         df6 = pd.read_csv(csv_s6)
         tex_path = os.path.join(output_dir, "table_jl_hierarchy.tex")
         with open(tex_path, "w") as f:
-            f.write("% Stage 6: The 4-Level Validation Hierarchy Success Rates\n")
+            f.write("% Stage 6: The 5-Level Validation Hierarchy Success Rates\n")
             f.write("\\begin{table}[htbp]\n\\centering\n\\small\n")
-            f.write("\\caption{Simultaneous Success Rates (\\%) across the 4 Hierarchy Levels ($r=50, \\varepsilon=0.20$)}\n")
+            f.write("\\caption{Simultaneous Success Rates (\\%) across Hierarchy Levels ($r=50, \\varepsilon=0.20$)}\n")
             f.write("\\label{tab:jl_hierarchy}\n")
-            f.write("\\begin{tabular}{rcrrrr}\n\\toprule\n")
-            f.write("Density $q$ & $\\mathrm{nnz}/\\mathrm{row}$ & Level 1: Strict JL & Level 2: Strict Norms & Level 3: Ordering ($\\tau\\ge 0.9$) & Level 4: Best-Iterate \\\\\n\\midrule\n")
+            f.write("\\begin{tabular}{rcrrrrr}\n\\toprule\n")
+            f.write("Density $q$ & $\\mathrm{nnz}/\\mathrm{row}$ & L1: Strict JL & L2: Norms ($\\varepsilon=0.2$) & L2b: Ward Bound & L3: Ordering ($\\tau\\ge 0.9$) & L4: Best-Iterate \\\\\n\\midrule\n")
             for _, row in df6.iterrows():
-                f.write(f"{row['q']:5.2f} & {row['nnz_per_row']:5.1f} & {row['Level1_AllPairs_Strict']*100:5.1f}\\% & {row['Level2_Norms_Strict']*100:5.1f}\\% & {row['Level3_Ordering_Tau90']*100:5.1f}\\% & \\textbf{{{row['Level4_Selection_Acc']*100:5.1f}\\%}} \\\\\n")
+                ward_val = f"{row['Level2B_Ward_Strict']*100:5.1f}\\%" if "Level2B_Ward_Strict" in row else "N/A"
+                f.write(f"{row['q']:5.2f} & {row['nnz_per_row']:5.1f} & {row['Level1_AllPairs_Strict']*100:5.1f}\\% & {row['Level2_Norms_Strict']*100:5.1f}\\% & {ward_val} & {row['Level3_Ordering_Tau90']*100:5.1f}\\% & \\textbf{{{row['Level4_Selection_Acc']*100:5.1f}\\%}} \\\\\n")
             f.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
         tex_files["stage6"] = tex_path
 

@@ -50,7 +50,13 @@ class TestStage6(unittest.TestCase):
         self.assertEqual(len(df_r), 2)
 
         # Check required columns
-        for col in ["Level1_AllPairs_Strict", "Level2_Norms_Strict", "Level3_Ordering_Tau90", "Level4_Selection_Acc"]:
+        for col in [
+            "Level1_AllPairs_Strict",
+            "Level2_Norms_Strict",
+            "Level2B_Ward_Strict",
+            "Level3_Ordering_Tau90",
+            "Level4_Selection_Acc",
+        ]:
             self.assertIn(col, df_q.columns)
             self.assertIn(col, df_r.columns)
 
@@ -58,6 +64,27 @@ class TestStage6(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.test_output_dir, "jl_hierarchy_comparison.png")))
         self.assertTrue(os.path.exists(os.path.join(self.test_output_dir, "jl_hierarchy_q_summary.csv")))
         self.assertTrue(os.path.exists(os.path.join(self.test_output_dir, "jl_hierarchy_r_summary.csv")))
+
+    def test_ward_bound_stats(self):
+        from metrics import ward_bound_stats
+        # True norms = 1.0, so E_true = 1.0
+        E_true = np.ones(5)
+        # Perfect estimate: E_hat = 1.0 -> ratio = 1.0
+        res = ward_bound_stats(E_true, E_true)
+        self.assertTrue(res["ward_simultaneous_success"])
+        self.assertEqual(res["ward_fraction_satisfied"], 1.0)
+
+        # Boundary test:
+        # Lower bound: ||e|| >= 0.8 * ||Psi e|| => ||Psi e|| <= 1.25 * ||e|| => E_hat <= 1.5625
+        # Upper bound: ||e|| <= (4/3) * ||Psi e|| => ||Psi e|| >= 0.75 * ||e|| => E_hat >= 0.5625
+        E_hat_inside = np.array([0.60, 0.80, 1.0, 1.20, 1.50])
+        res_inside = ward_bound_stats(E_true, E_hat_inside)
+        self.assertTrue(res_inside["ward_simultaneous_success"])
+
+        E_hat_outside = np.array([0.50, 0.80, 1.0, 1.20, 1.50])  # 0.50 is outside (needs >= 0.5625)
+        res_outside = ward_bound_stats(E_true, E_hat_outside)
+        self.assertFalse(res_outside["ward_simultaneous_success"])
+        self.assertEqual(res_outside["ward_fraction_satisfied"], 0.8)
 
 
 if __name__ == "__main__":

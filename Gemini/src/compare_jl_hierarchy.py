@@ -33,6 +33,7 @@ from metrics import (
     kendall_tau,
     pairwise_concordance,
     best_iterate_selection,
+    ward_bound_stats,
 )
 
 
@@ -193,8 +194,10 @@ def run_jl_hierarchy_experiments(
             sel = best_iterate_selection(E_true, E_hat)
             tau = kendall_tau(E_true, E_hat)
 
-            # Test Level 1 and Level 2
+            # Test Level 1 and Level 2 (on actual error vector projections)
             jl_res = compute_all_pairs_jl(error_vectors, Psi, epsilon=epsilon)
+            proj_error_sq = np.sum((error_vectors @ Psi.T) ** 2, axis=1)
+            ward_res = ward_bound_stats(E_true, proj_error_sq)
 
             hierarchy_q_records.append({
                 "trial": t,
@@ -204,6 +207,8 @@ def run_jl_hierarchy_experiments(
                 "level1_all_pairs_fraction": jl_res["all_pairs_fraction_satisfied"],
                 "level2_norm_simultaneous": jl_res["norm_simultaneous_success"],
                 "level2_norm_fraction": jl_res["norm_fraction_satisfied"],
+                "level2b_ward_simultaneous": ward_res["ward_simultaneous_success"],
+                "level2b_ward_fraction": ward_res["ward_fraction_satisfied"],
                 "level3_ordering_tau90": bool(tau >= 0.90),
                 "level3_kendall_tau": tau,
                 "level4_selection_match": sel["is_exact_match"],
@@ -240,6 +245,8 @@ def run_jl_hierarchy_experiments(
             "Level1_AllPairs_Fraction": float(sub["level1_all_pairs_fraction"].mean()),
             "Level2_Norms_Strict": float(sub["level2_norm_simultaneous"].mean()),
             "Level2_Norms_Fraction": float(sub["level2_norm_fraction"].mean()),
+            "Level2B_Ward_Strict": float(sub["level2b_ward_simultaneous"].mean()),
+            "Level2B_Ward_Fraction": float(sub["level2b_ward_fraction"].mean()),
             "Level3_Ordering_Tau90": float(sub["level3_ordering_tau90"].mean()),
             "Level3_Mean_Tau": float(sub["level3_kendall_tau"].mean()),
             "Level4_Selection_Acc": float(sub["level4_selection_match"].mean()),
@@ -264,6 +271,8 @@ def run_jl_hierarchy_experiments(
             sel = best_iterate_selection(E_true, E_hat)
             tau = kendall_tau(E_true, E_hat)
             jl_res = compute_all_pairs_jl(error_vectors, Psi, epsilon=epsilon)
+            proj_error_sq = np.sum((error_vectors @ Psi.T) ** 2, axis=1)
+            ward_res = ward_bound_stats(E_true, proj_error_sq)
 
             hierarchy_r_records.append({
                 "trial": t,
@@ -272,6 +281,8 @@ def run_jl_hierarchy_experiments(
                 "level1_all_pairs_fraction": jl_res["all_pairs_fraction_satisfied"],
                 "level2_norm_simultaneous": jl_res["norm_simultaneous_success"],
                 "level2_norm_fraction": jl_res["norm_fraction_satisfied"],
+                "level2b_ward_simultaneous": ward_res["ward_simultaneous_success"],
+                "level2b_ward_fraction": ward_res["ward_fraction_satisfied"],
                 "level3_ordering_tau90": bool(tau >= 0.90),
                 "level4_selection_match": sel["is_exact_match"],
                 "level4_near_match": abs(sel["j_hat_star"] - sel["j_true_star"]) <= 1,
@@ -288,6 +299,8 @@ def run_jl_hierarchy_experiments(
             "Level1_AllPairs_Fraction": float(sub["level1_all_pairs_fraction"].mean()),
             "Level2_Norms_Strict": float(sub["level2_norm_simultaneous"].mean()),
             "Level2_Norms_Fraction": float(sub["level2_norm_fraction"].mean()),
+            "Level2B_Ward_Strict": float(sub["level2b_ward_simultaneous"].mean()),
+            "Level2B_Ward_Fraction": float(sub["level2b_ward_fraction"].mean()),
             "Level3_Ordering_Tau90": float(sub["level3_ordering_tau90"].mean()),
             "Level4_Selection_Acc": float(sub["level4_selection_match"].mean()),
             "Level4_Near_Acc": float(sub["level4_near_match"].mean()),
@@ -305,7 +318,8 @@ def run_jl_hierarchy_experiments(
     print("=" * 95)
     disp_cols = [
         "q", "nnz_per_row", "Level1_AllPairs_Strict", "Level1_AllPairs_Fraction",
-        "Level2_Norms_Strict", "Level3_Ordering_Tau90", "Level4_Selection_Acc", "Level4_Near_Acc"
+        "Level2_Norms_Strict", "Level2B_Ward_Strict", "Level3_Ordering_Tau90",
+        "Level4_Selection_Acc", "Level4_Near_Acc"
     ]
     summary_display = df_hierarchy_q_summary[disp_cols].copy()
     for col in disp_cols[2:]:
@@ -322,8 +336,9 @@ def run_jl_hierarchy_experiments(
     ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level4_Near_Acc"] * 100, "d--", color="teal", linewidth=2.0, label=r"Level 4b: Near Selection $(\pm 1)$")
     ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level4_Selection_Acc"] * 100, "o-", color="darkblue", linewidth=2.2, label=r"Level 4: Best-Iterate Selection $\hat{j}=j^*$")
     ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level3_Ordering_Tau90"] * 100, "s-", color="forestgreen", linewidth=2.0, label=r"Level 3: Ordering ($\tau \geq 0.90$)")
-    ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level2_Norms_Strict"] * 100, "^-", color="purple", linewidth=1.8, label=r"Level 2: Strict Norm Preservation")
-    ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level1_AllPairs_Strict"] * 100, "x-", color="darkred", linewidth=1.8, label=r"Level 1: Strict All-Pairs JL")
+    ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level2B_Ward_Strict"] * 100, "v-", color="darkorange", linewidth=2.0, label=r"Level 2b: Ward Bound ($4/5 \leq \|e\|/\|\Psi e\| \leq 4/3$)")
+    ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level2_Norms_Strict"] * 100, "^-", color="purple", linewidth=1.8, label=r"Level 2: Strict Norms ($\varepsilon=0.20$)")
+    ax_q.plot(df_hierarchy_q_summary["q"], df_hierarchy_q_summary["Level1_AllPairs_Strict"] * 100, "x-", color="darkred", linewidth=1.8, label=r"Level 1: Strict All-Pairs JL ($\varepsilon=0.20$)")
 
     ax_q.set_xscale("log")
     ax_q.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11)
@@ -331,21 +346,22 @@ def run_jl_hierarchy_experiments(
     ax_q.set_ylim(-2, 105)
     ax_q.set_title("Hierarchy Success Rate vs Validation Sparsity $q$ (at $r=50$)", fontsize=12, fontweight="bold")
     ax_q.grid(True, which="both", linestyle="--", alpha=0.4)
-    ax_q.legend(fontsize=8.5, loc="lower left")
+    ax_q.legend(fontsize=8.0, loc="lower left")
 
     # Panel 2: Hierarchy Success Rates vs Measurement Budget r (at q=0.20)
     ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level4_Near_Acc"] * 100, "d--", color="teal", linewidth=2.0, label=r"Level 4b: Near Selection $(\pm 1)$")
     ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level4_Selection_Acc"] * 100, "o-", color="darkblue", linewidth=2.2, label=r"Level 4: Best-Iterate Selection $\hat{j}=j^*$")
     ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level3_Ordering_Tau90"] * 100, "s-", color="forestgreen", linewidth=2.0, label=r"Level 3: Ordering ($\tau \geq 0.90$)")
-    ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level2_Norms_Strict"] * 100, "^-", color="purple", linewidth=1.8, label=r"Level 2: Strict Norm Preservation")
-    ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level1_AllPairs_Strict"] * 100, "x-", color="darkred", linewidth=1.8, label=r"Level 1: Strict All-Pairs JL")
+    ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level2B_Ward_Strict"] * 100, "v-", color="darkorange", linewidth=2.0, label=r"Level 2b: Ward Bound ($4/5 \leq \|e\|/\|\Psi e\| \leq 4/3$)")
+    ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level2_Norms_Strict"] * 100, "^-", color="purple", linewidth=1.8, label=r"Level 2: Strict Norms ($\varepsilon=0.20$)")
+    ax_r.plot(df_hierarchy_r_summary["r"], df_hierarchy_r_summary["Level1_AllPairs_Strict"] * 100, "x-", color="darkred", linewidth=1.8, label=r"Level 1: Strict All-Pairs JL ($\varepsilon=0.20$)")
 
     ax_r.set_xlabel("Validation Measurements $r$", fontsize=11)
     ax_r.set_ylabel("Success Rate (%)", fontsize=11)
     ax_r.set_ylim(-2, 105)
     ax_r.set_title("Hierarchy Success Rate vs Measurements $r$ (at $q=0.20$)", fontsize=12, fontweight="bold")
     ax_r.grid(True, which="both", linestyle="--", alpha=0.4)
-    ax_r.legend(fontsize=8.5, loc="lower right")
+    ax_r.legend(fontsize=8.0, loc="lower right")
 
     # Panel 3: Distortion vs Error Vector Sparsity ||e^j||_0
     for q_plot, c, label in [(1.0, "black", "Dense (q=1.0)"), (0.2, "royalblue", "Sparse (q=0.2)"), (0.05, "crimson", "Ultra-Sparse (q=0.05)")]:
@@ -360,14 +376,14 @@ def run_jl_hierarchy_experiments(
     ax_sparsity.legend(fontsize=9)
 
     # Panel 4: Required Measurements r to reach 75% Success Rate
-    # Find minimum r reaching >= 75% for each level
     target_thresh = 0.75
-    levels = ["Level 1: Strict JL", "Level 2: Strict Norms", "Level 3: Ordering Tau>=0.9", "Level 4: Best-Iterate Selection"]
+    levels = ["L1: Strict JL", "L2: Norms (ε=0.2)", "L2b: Ward (4/5..4/3)", "L3: Tau>=0.9", "L4: Selection"]
     req_r = []
 
     for key, name in [
         ("Level1_AllPairs_Strict", "Level 1"),
         ("Level2_Norms_Strict", "Level 2"),
+        ("Level2B_Ward_Strict", "Level 2b"),
         ("Level3_Ordering_Tau90", "Level 3"),
         ("Level4_Selection_Acc", "Level 4"),
     ]:
@@ -375,7 +391,7 @@ def run_jl_hierarchy_experiments(
         min_r = qual["r"].min() if len(qual) > 0 else 120  # cap if not reached
         req_r.append(min_r)
 
-    bar_colors = ["darkred", "purple", "forestgreen", "darkblue"]
+    bar_colors = ["darkred", "purple", "darkorange", "forestgreen", "darkblue"]
     bars = ax_levels_bar.bar(levels, req_r, color=bar_colors, edgecolor="black", width=0.55)
     for bar in bars:
         h = bar.get_height()
