@@ -5,7 +5,7 @@ Runs all stages of the Compressed Sensing Cross-Validation research pipeline.
 Modes:
   --mode fast : Runs quick verification of all stages (~10 seconds).
   --mode full : Runs full statistical reproduction (100 trials per experiment).
-  --stage N   : Runs a specific stage (2 through 8).
+  --stage N   : Runs a specific stage (2 through 7).
 """
 
 import os
@@ -14,16 +14,17 @@ import argparse
 import time
 
 # Ensure src directory is in sys.path
-sys.path.insert(0, os.path.dirname(__file__))
+SRC_DIR = os.path.dirname(__file__)
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-from plot_single_trajectory import run_and_plot_single_trajectory
-from run_trajectory_ensemble import run_ensemble
-from evaluate_three_notions import evaluate_three_notions
-from compare_matrix_families import compare_matrix_families
-from compare_budgets import run_budget_experiments
-from compare_jl_hierarchy import run_jl_hierarchy_experiments
-from generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
-from export_report import generate_latex_tables, export_pdf_vector_figures, generate_executive_report_summary
+from experiments.plot_single_trajectory import run_and_plot_single_trajectory
+from experiments.run_trajectory_ensemble import run_ensemble
+from experiments.evaluate_three_notions import evaluate_three_notions
+from experiments.compare_matrix_families import compare_matrix_families
+from experiments.compare_budgets import run_budget_experiments
+from experiments.compare_jl_hierarchy import run_jl_hierarchy_experiments
+from experiments.generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
 
 
 def run_pipeline(mode: str = "fast", target_stage: int | None = None):
@@ -95,15 +96,6 @@ def run_pipeline(mode: str = "fast", target_stage: int | None = None):
             run_regime_scaling_sweep(num_trials=50, output_dir=output_dir)
         print(f"Stage 7 completed in {time.time() - t0:.2f}s")
 
-    # Stage 8: Report Generation & Publication Export Engine
-    if target_stage is None or target_stage == 8:
-        print("\n>>> [STAGE 8] Generating Publication LaTeX Tables & Vector PDFs...")
-        t0 = time.time()
-        tex_files = generate_latex_tables(output_dir)
-        pdfs = export_pdf_vector_figures(output_dir)
-        json_path = generate_executive_report_summary(output_dir)
-        print(f"Stage 8 completed in {time.time() - t0:.2f}s (Exported {len(tex_files)} LaTeX tables, {len(pdfs)} PDFs)")
-
     total_elapsed = time.time() - start_time
     print("\n" + "=" * 80)
     print(f"PIPELINE COMPLETED SUCCESSFULLY IN {total_elapsed:.2f} SECONDS!")
@@ -114,7 +106,7 @@ def run_pipeline(mode: str = "fast", target_stage: int | None = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Master automation runner for CS cross-validation pipeline")
     parser.add_argument("--mode", choices=["fast", "full"], default="fast", help="Execution mode (fast for testing, full for production)")
-    parser.add_argument("--stage", type=int, choices=[2, 3, 4, 5, 6, 7, 8], default=None, help="Run a specific stage only")
+    parser.add_argument("--stage", type=int, choices=[2, 3, 4, 5, 6, 7], default=None, help="Run a specific stage only")
     args = parser.parse_args()
 
     run_pipeline(mode=args.mode, target_stage=args.stage)

@@ -5,9 +5,11 @@ import sys
 import os
 
 # Ensure Gemini/src is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-from compare_jl_hierarchy import compute_all_pairs_jl, run_jl_hierarchy_experiments
+from experiments.compare_jl_hierarchy import compute_all_pairs_jl, run_jl_hierarchy_experiments
 
 
 class TestStage6(unittest.TestCase):
@@ -66,7 +68,7 @@ class TestStage6(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.test_output_dir, "jl_hierarchy_r_summary.csv")))
 
     def test_ward_bound_stats(self):
-        from metrics import ward_bound_stats
+        from groundwork.metrics import ward_bound_stats
         # True norms = 1.0, so E_true = 1.0
         E_true = np.ones(5)
         # Perfect estimate: E_hat = 1.0 -> ratio = 1.0

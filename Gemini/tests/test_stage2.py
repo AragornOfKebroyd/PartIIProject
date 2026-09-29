@@ -5,10 +5,12 @@ import sys
 import os
 
 # Ensure Gemini/src is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-from plot_single_trajectory import run_and_plot_single_trajectory
-from run_trajectory_ensemble import run_ensemble
+from experiments.plot_single_trajectory import run_and_plot_single_trajectory
+from experiments.run_trajectory_ensemble import run_ensemble
 
 
 class TestStage2(unittest.TestCase):

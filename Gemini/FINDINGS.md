@@ -222,17 +222,7 @@ Across initial sweeps with $N \in \{256, 512, 1024\}$ at fixed $r=60, s=10$:
 > [!NOTE]
 > **Working Hypothesis**: These three data points suggest that required validation rows $r$ may depend primarily on signal sparsity $s$ and measurement budget $r$ rather than ambient dimension $N$. However, confirming this requires a multi-dimensional sweep across joint $(s, N, r)$ combinations.
 
----
 
-### Stage 8: Publication Deliverables & Artifact Integration
-- **Automated LaTeX Tables** ([`Gemini/output/`](file:///home/aragorn/Documents/PartIIProject/Gemini/output)):
-  1. [`table_three_notions.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_three_notions.tex): Validation hierarchy breakdown vs density $q$.
-  2. [`table_matrix_families.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_matrix_families.tex): Kurtosis comparison across matrix families.
-  3. [`table_budget_matched.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_budget_matched.tex): Iso-compute non-zero budget trade-off.
-  4. [`table_jl_hierarchy.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_jl_hierarchy.tex): 5-level task hierarchy success rates.
-  5. [`table_phase_map.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_phase_map.tex): 2D operational phase matrix over $(q, r)$.
-- **Vector Graphics**: Exported lossless PDF figures for all experimental plots.
-- **Machine-Readable Metadata**: Generated [`executive_report_summary.json`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/executive_report_summary.json).
 
 ---
 

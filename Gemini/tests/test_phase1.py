@@ -4,17 +4,19 @@ import sys
 import os
 
 # Ensure Gemini/src is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-from signals import generate_sparse_signal, sparsity_of
-from sensing import generate_sensing_matrix, add_noise, add_noise_snr
-from omp import run_omp_trajectory
-from projections import (
+from groundwork.signals import generate_sparse_signal, sparsity_of
+from groundwork.sensing import generate_sensing_matrix, add_noise, add_noise_snr
+from groundwork.omp import run_omp_trajectory
+from groundwork.projections import (
     generate_projection_matrix,
     compute_projection_stats,
     budget_matched_dense_rows,
 )
-from metrics import (
+from groundwork.metrics import (
     compute_cv_errors,
     relative_norm_errors,
     kendall_tau,

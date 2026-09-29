@@ -5,9 +5,11 @@ import sys
 import os
 
 # Ensure Gemini/src is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-from generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
+from experiments.generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
 
 
 class TestStage7(unittest.TestCase):

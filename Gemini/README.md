@@ -43,18 +43,21 @@ PartIIProject/
     ├── README.md                      # This user guide
     ├── run_all.sh                     # Shell automation script
     ├── src/                           # Core library & experiment scripts
-    │   ├── signals.py                 # Sparse vector generator
-    │   ├── sensing.py                 # Measurement matrices & noise
-    │   ├── omp.py                     # OMP retaining complete iterate trajectory
-    │   ├── projections.py             # Gaussian, Rademacher, Sparse Rademacher
-    │   ├── metrics.py                 # Norm error, Kendall's tau, selection acc
-    │   ├── plot_single_trajectory.py  # Stage 2: Single trajectory visualizer
-    │   ├── run_trajectory_ensemble.py # Stage 2: Ensemble trajectory statistics
-    │   ├── evaluate_three_notions.py  # Stage 3: Norm error vs Ordering vs Selection
-    │   ├── compare_matrix_families.py # Stage 4: Matrix distribution families
-    │   ├── compare_budgets.py         # Stage 5: Fixed-r vs Fixed-nnz (Iso-Compute)
-    │   ├── compare_jl_hierarchy.py    # Stage 6: All-pairs JL vs Task hierarchy
-    │   ├── generate_heatmaps.py       # Stage 7: 2D Phase Transitions & Scaling
+    │   ├── groundwork/                # Mathematical foundation modules
+    │   │   ├── signals.py             # Sparse vector generator
+    │   │   ├── sensing.py             # Measurement matrices & noise
+    │   │   ├── omp.py                 # OMP retaining complete iterate trajectory
+    │   │   ├── projections.py         # Gaussian, Rademacher, Sparse Rademacher
+    │   │   └── metrics.py             # Norm error, Kendall's tau, selection acc, Ward bounds
+    │   ├── experiments/               # Evaluation scripts and parameter sweeps
+    │   │   ├── plot_single_trajectory.py  # Stage 2: Single trajectory visualizer
+    │   │   ├── run_trajectory_ensemble.py # Stage 2: Ensemble trajectory statistics
+    │   │   ├── evaluate_three_notions.py  # Stage 3: Norm error vs Ordering vs Selection
+    │   │   ├── compare_matrix_families.py # Stage 4: Matrix distribution families
+    │   │   ├── compare_budgets.py         # Stage 5: Fixed-r vs Fixed-nnz (Iso-Compute)
+    │   │   ├── compare_jl_hierarchy.py    # Stage 6: All-pairs JL vs Task hierarchy
+    │   │   ├── analyze_separation_reversal.py # Stage 6b: Candidate error separation vs reversals
+    │   │   └── generate_heatmaps.py       # Stage 7: 2D Phase Transitions & Scaling
     │   └── run_pipeline.py            # Master pipeline runner
     ├── output/                        # All generated figures (.png) and data (.csv)
     └── tests/                         # Unit tests (test_phase1 to test_stage7)
@@ -62,7 +65,7 @@ PartIIProject/
 
 ---
 
-## 3. Core Modules (`Gemini/src/`)
+## 3. Groundwork Modules (`Gemini/src/groundwork/`)
 
 ### `signals.py`
 - `generate_sparse_signal(N, s, coeff_dist="gaussian", rng=None, **kwargs)`:
@@ -108,52 +111,46 @@ PartIIProject/
 ### Stage 2: Single Trajectory & Ensemble Statistics
 ```bash
 # 1. Single Trajectory Visualizer (Generates single_trajectory.png)
-venv/bin/python Gemini/src/plot_single_trajectory.py --N 512 --s 10 --m 120 --r 40 --q 0.2 --snr 25.0
+venv/bin/python Gemini/src/experiments/plot_single_trajectory.py --N 512 --s 10 --m 120 --r 40 --q 0.2 --snr 25.0
 
 # 2. Ensemble Statistics across 100 trials (Generates ensemble_trajectories.png)
-venv/bin/python Gemini/src/run_trajectory_ensemble.py --trials 100 --N 512 --s 10 --m 120 --r 40 --q_sparse 0.2 --q_ultra_sparse 0.05
+venv/bin/python Gemini/src/experiments/run_trajectory_ensemble.py --trials 100 --N 512 --s 10 --m 120 --r 40 --q_sparse 0.2 --q_ultra_sparse 0.05
 ```
 
 ### Stage 3: The Three Notions of "Works" vs Sparsity $q$
 ```bash
 # Sweeps q in [1.0 ... 0.01] (Generates three_notions_vs_sparsity.png)
-venv/bin/python Gemini/src/evaluate_three_notions.py --trials 100 --N 512 --s 10 --m 120 --r 40 --snr 25.0
+venv/bin/python Gemini/src/experiments/evaluate_three_notions.py --trials 100 --N 512 --s 10 --m 120 --r 40 --snr 25.0
 ```
 
 ### Stage 4: Matrix Distribution Families Comparison
 ```bash
 # Compares Gaussian vs Rademacher vs Sparse Rademacher across r in [10 ... 100] (Generates matrix_families_comparison.png)
-venv/bin/python Gemini/src/compare_matrix_families.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0
+venv/bin/python Gemini/src/experiments/compare_matrix_families.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0
 ```
 
 ### Stage 5: Budget-Matched Experiments (Fixed $r$ vs Fixed $\operatorname{nnz}$)
 ```bash
 # Tests whether a "wide-and-sparse" matrix beats a "narrow-and-dense" matrix at equal FLOP budget (Generates budget_matched_comparison.png)
-venv/bin/python Gemini/src/compare_budgets.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0
+venv/bin/python Gemini/src/experiments/compare_budgets.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0
 ```
 
 ### Stage 6: General JL Requirement vs Task-Specific Hierarchy
 ```bash
 # Evaluates All-pairs JL vs Norms vs Ordering vs Model Selection on P={0, e^1, ..., e^p} (Generates jl_hierarchy_comparison.png)
-venv/bin/python Gemini/src/compare_jl_hierarchy.py --trials 100 --N 512 --s 10 --m 120 --eps 0.20 --snr 25.0
+venv/bin/python Gemini/src/experiments/compare_jl_hierarchy.py --trials 100 --N 512 --s 10 --m 120 --eps 0.20 --snr 25.0
 ```
 
 ### Stage 6b: Candidate Error Separation vs Pairwise Ordering Reversal
 ```bash
 # Quantifies reversal probability P(Reversal | Delta_rel) where Delta_rel = |E_i - E_j| / min(E_i, E_j)
-venv/bin/python Gemini/src/analyze_separation_reversal.py --trials 50 --N 512 --s 10 --m 120 --r 40 --snr 25.0
+venv/bin/python Gemini/src/experiments/analyze_separation_reversal.py --trials 50 --N 512 --s 10 --m 120 --r 40 --snr 25.0
 ```
 
 ### Stage 7: 2D Phase Transition Heatmaps and Scaling
 ```bash
 # Computes 63-cell (q, r) phase diagram + N & s scaling sweep (Generates heatmap_selection_accuracy.png, heatmap_kendall_tau.png, heatmap_regime_scaling.png)
-venv/bin/python Gemini/src/generate_heatmaps.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0 --run_scaling
-```
-
-### Stage 8: Publication Report Generation & Export Engine
-```bash
-# Generates publication-ready LaTeX tables (.tex), vector graphics (.pdf), and executive summary (.json)
-venv/bin/python Gemini/src/export_report.py
+venv/bin/python Gemini/src/experiments/generate_heatmaps.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0 --run_scaling
 ```
 
 ---
@@ -162,20 +159,15 @@ venv/bin/python Gemini/src/export_report.py
 
 | Filename | Description |
 | :--- | :--- |
-| [`single_trajectory.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/single_trajectory.png) / `.pdf` | Single trajectory plot ($E_j$ vs $\widehat{E}_j$) with error sparsity panel |
-| [`ensemble_trajectories.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/ensemble_trajectories.png) / `.pdf` | 100-trial ensemble median & IQR ribbon trajectories, Kendall $\tau$ boxplots, accuracy bars |
-| [`three_notions_vs_sparsity.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/three_notions_vs_sparsity.png) / `.pdf` | 4-panel comparison of Norm Error vs Ordering vs Selection vs Hierarchy Retention |
-| [`matrix_families_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/matrix_families_comparison.png) / `.pdf` | Comparison of Gaussian vs Rademacher vs Sparse Rademacher verifying kurtosis $\gamma$ |
-| [`budget_matched_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/budget_matched_comparison.png) / `.pdf` | The "Wide-and-Sparse" advantage at fixed FLOP budget $\operatorname{nnz}(\Psi)$ |
-| [`jl_hierarchy_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/jl_hierarchy_comparison.png) / `.pdf` | 5-level hierarchy success rates including Rachel Ward's bound and required measurement budget comparison |
-| [`pairwise_reversal_vs_separation.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/pairwise_reversal_vs_separation.png) / `.pdf` | Pairwise reversal probability vs candidate error separation $\Delta_{\text{rel}} = \frac{\|E_i - E_j\|}{\min(E_i, E_j)}$ |
-| [`heatmap_selection_accuracy.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_selection_accuracy.png) / `.pdf` | 2D $(q, r) \mapsto \text{Accuracy}$ contour phase map for Exact and Near Selection |
-| [`heatmap_kendall_tau.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_kendall_tau.png) / `.pdf` | 2D $(q, r) \mapsto \tau$ contour phase map for rank correlation |
-| [`heatmap_regime_scaling.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_regime_scaling.png) / `.pdf` | Scaling curves across dimensions $N \in \{256, 512, 1024\}$ and sparsities $s \in \{5, 10, 20\}$ |
-| [`table_three_notions.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_three_notions.tex) | Publication LaTeX table for Stage 3 validation hierarchy metrics |
-| [`table_matrix_families.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_matrix_families.tex) | Publication LaTeX table for Stage 4 matrix family accuracy and kurtosis variance |
-| [`table_budget_matched.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_budget_matched.tex) | Publication LaTeX table for Stage 5 iso-compute non-zero budget comparison |
-| [`table_jl_hierarchy.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_jl_hierarchy.tex) | Publication LaTeX table for Stage 6 5-level task hierarchy success rates |
-| [`table_phase_map.tex`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/table_phase_map.tex) | Publication LaTeX table for Stage 7 2D $(q, r)$ phase transition matrix |
-| [`executive_report_summary.json`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/executive_report_summary.json) | Consolidated JSON metric snapshot of all experimental stages for programmatic reporting |
+| [`single_trajectory.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/single_trajectory.png) | Single trajectory plot ($E_j$ vs $\widehat{E}_j$) with error sparsity panel |
+| [`ensemble_trajectories.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/ensemble_trajectories.png) | 100-trial ensemble median & IQR ribbon trajectories, Kendall $\tau$ boxplots, accuracy bars |
+| [`three_notions_vs_sparsity.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/three_notions_vs_sparsity.png) | 4-panel comparison of Norm Error vs Ordering vs Selection vs Hierarchy Retention |
+| [`matrix_families_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/matrix_families_comparison.png) | Comparison of Gaussian vs Rademacher vs Sparse Rademacher verifying kurtosis $\gamma$ |
+| [`budget_matched_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/budget_matched_comparison.png) | The "Wide-and-Sparse" advantage at fixed FLOP budget $\operatorname{nnz}(\Psi)$ |
+| [`jl_hierarchy_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/jl_hierarchy_comparison.png) | 5-level hierarchy success rates including Rachel Ward's bound and required measurement budget comparison |
+| [`pairwise_reversal_vs_separation.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/pairwise_reversal_vs_separation.png) | Pairwise reversal probability vs candidate error separation $\Delta_{\text{rel}} = \frac{\|E_i - E_j\|}{\min(E_i, E_j)}$ |
+| [`heatmap_selection_accuracy.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_selection_accuracy.png) | 2D $(q, r) \mapsto \text{Accuracy}$ contour phase map for Exact and Near Selection |
+| [`heatmap_kendall_tau.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_kendall_tau.png) | 2D $(q, r) \mapsto \tau$ contour phase map for rank correlation |
+| [`heatmap_regime_scaling.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/heatmap_regime_scaling.png) | Scaling curves across dimensions $N \in \{256, 512, 1024\}$ and sparsities $s \in \{5, 10, 20\}$ |
 | `*.csv` | Structured data tables containing numerical trial records and summary aggregations |
+

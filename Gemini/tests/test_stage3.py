@@ -5,9 +5,11 @@ import sys
 import os
 
 # Ensure Gemini/src is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
-from evaluate_three_notions import evaluate_three_notions
+from experiments.evaluate_three_notions import evaluate_three_notions
 
 
 class TestStage3(unittest.TestCase):
