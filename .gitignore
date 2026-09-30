@@ -1,2 +1,4 @@
 venv/
 .vscode/
+Gemini/output/
+__pycache__/

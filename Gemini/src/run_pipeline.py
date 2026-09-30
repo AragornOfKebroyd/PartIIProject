@@ -25,6 +25,7 @@ from experiments.compare_matrix_families import compare_matrix_families
 from experiments.compare_budgets import run_budget_experiments
 from experiments.compare_jl_hierarchy import run_jl_hierarchy_experiments
 from experiments.generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
+from experiments.compare_joint_sparsity import run_joint_sparsity_cross_product
 
 
 def run_pipeline(mode: str = "fast", target_stage: int | None = None):
@@ -96,6 +97,25 @@ def run_pipeline(mode: str = "fast", target_stage: int | None = None):
             run_regime_scaling_sweep(num_trials=50, output_dir=output_dir)
         print(f"Stage 7 completed in {time.time() - t0:.2f}s")
 
+    # Stage 8: Joint Sparsity Cross-Product (Phi x Psi)
+    if target_stage is None or target_stage == 8:
+        print("\n>>> [STAGE 8] Running Joint Sparsity Cross-Product Sweep (Phi x Psi)...")
+        t0 = time.time()
+        q_phi = [1.0, 0.2, 0.05] if mode == "fast" else [1.0, 0.5, 0.2, 0.1, 0.05]
+        q_psi = [1.0, 0.2, 0.05] if mode == "fast" else [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
+        run_joint_sparsity_cross_product(
+            q_phi_values=q_phi,
+            q_psi_values=q_psi,
+            num_trials=trials,
+            N=N,
+            s=s,
+            m=m,
+            r=40,
+            max_iter=max_iter,
+            output_dir=output_dir,
+        )
+        print(f"Stage 8 completed in {time.time() - t0:.2f}s")
+
     total_elapsed = time.time() - start_time
     print("\n" + "=" * 80)
     print(f"PIPELINE COMPLETED SUCCESSFULLY IN {total_elapsed:.2f} SECONDS!")
@@ -106,7 +126,7 @@ def run_pipeline(mode: str = "fast", target_stage: int | None = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Master automation runner for CS cross-validation pipeline")
     parser.add_argument("--mode", choices=["fast", "full"], default="fast", help="Execution mode (fast for testing, full for production)")
-    parser.add_argument("--stage", type=int, choices=[2, 3, 4, 5, 6, 7], default=None, help="Run a specific stage only")
+    parser.add_argument("--stage", type=int, choices=[2, 3, 4, 5, 6, 7, 8], default=None, help="Run a specific stage only")
     args = parser.parse_args()
 
     run_pipeline(mode=args.mode, target_stage=args.stage)

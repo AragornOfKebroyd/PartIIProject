@@ -2,7 +2,7 @@
 Gemini Compressed Sensing Library
 
 Organised into:
-- groundwork: Fundamental mathematical modules (signals, sensing, omp, projections, metrics)
+- groundwork: Fundamental mathematical modules (signals, matrices, omp, metrics)
 - experiments: Experimental stages and comparison sweeps
 - run_pipeline: Master execution pipeline
 """
@@ -12,13 +12,17 @@ from . import experiments
 
 # Expose groundwork directly at package level
 from .groundwork.signals import generate_sparse_signal, sparsity_of
-from .groundwork.sensing import generate_sensing_matrix, add_noise, add_noise_snr
-from .groundwork.omp import run_omp_trajectory, OMPTrajectory
-from .groundwork.projections import (
+from .groundwork.matrices import (
+    generate_measurement_matrix,
+    generate_sensing_matrix,
     generate_projection_matrix,
+    compute_matrix_stats,
     compute_projection_stats,
     budget_matched_dense_rows,
+    add_noise,
+    add_noise_snr,
 )
+from .groundwork.omp import run_omp_trajectory, OMPTrajectory
 from .groundwork.metrics import (
     compute_cv_errors,
     relative_norm_errors,
@@ -39,14 +43,16 @@ __all__ = [
     "experiments",
     "generate_sparse_signal",
     "sparsity_of",
+    "generate_measurement_matrix",
     "generate_sensing_matrix",
+    "generate_projection_matrix",
+    "compute_matrix_stats",
+    "compute_projection_stats",
+    "budget_matched_dense_rows",
     "add_noise",
     "add_noise_snr",
     "run_omp_trajectory",
     "OMPTrajectory",
-    "generate_projection_matrix",
-    "compute_projection_stats",
-    "budget_matched_dense_rows",
     "compute_cv_errors",
     "relative_norm_errors",
     "error_ratios",

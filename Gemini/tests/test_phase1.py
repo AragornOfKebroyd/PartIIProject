@@ -9,13 +9,17 @@ if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
 from groundwork.signals import generate_sparse_signal, sparsity_of
-from groundwork.sensing import generate_sensing_matrix, add_noise, add_noise_snr
-from groundwork.omp import run_omp_trajectory
-from groundwork.projections import (
+from groundwork.matrices import (
+    generate_measurement_matrix,
+    generate_sensing_matrix,
     generate_projection_matrix,
+    compute_matrix_stats,
     compute_projection_stats,
     budget_matched_dense_rows,
+    add_noise,
+    add_noise_snr,
 )
+from groundwork.omp import run_omp_trajectory
 from groundwork.metrics import (
     compute_cv_errors,
     relative_norm_errors,

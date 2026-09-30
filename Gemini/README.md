@@ -45,9 +45,8 @@ PartIIProject/
     ├── src/                           # Core library & experiment scripts
     │   ├── groundwork/                # Mathematical foundation modules
     │   │   ├── signals.py             # Sparse vector generator
-    │   │   ├── sensing.py             # Measurement matrices & noise
+    │   │   ├── matrices.py            # Unified sensing Phi & validation Psi generator
     │   │   ├── omp.py                 # OMP retaining complete iterate trajectory
-    │   │   ├── projections.py         # Gaussian, Rademacher, Sparse Rademacher
     │   │   └── metrics.py             # Norm error, Kendall's tau, selection acc, Ward bounds
     │   ├── experiments/               # Evaluation scripts and parameter sweeps
     │   │   ├── plot_single_trajectory.py  # Stage 2: Single trajectory visualizer
@@ -57,10 +56,11 @@ PartIIProject/
     │   │   ├── compare_budgets.py         # Stage 5: Fixed-r vs Fixed-nnz (Iso-Compute)
     │   │   ├── compare_jl_hierarchy.py    # Stage 6: All-pairs JL vs Task hierarchy
     │   │   ├── analyze_separation_reversal.py # Stage 6b: Candidate error separation vs reversals
-    │   │   └── generate_heatmaps.py       # Stage 7: 2D Phase Transitions & Scaling
+    │   │   ├── generate_heatmaps.py       # Stage 7: 2D Phase Transitions & Scaling
+    │   │   └── compare_joint_sparsity.py  # Stage 7b: Joint sensing & validation sparsity cross-product
     │   └── run_pipeline.py            # Master pipeline runner
     ├── output/                        # All generated figures (.png) and data (.csv)
-    └── tests/                         # Unit tests (test_phase1 to test_stage7)
+    └── tests/                         # Unit tests (test_phase1 to test_joint_sparsity)
 ```
 
 ---
@@ -72,11 +72,15 @@ PartIIProject/
   Generates an $s$-sparse vector of length $N$. Supports `"gaussian"`, `"rademacher"`, `"uniform"` $[-b, -a] \cup [a, b]$, and `"decay"` (power-law decay $k^{-\alpha}$).
 - `sparsity_of(v, tol=1e-8)`: Returns the number of non-zero entries.
 
-### `sensing.py`
-- `generate_sensing_matrix(m, N, dist="gaussian", normalize="column", rng=None)`:
-  Produces sensing matrix $\Phi \in \mathbb{R}^{m \times N}$ with column normalization ($\|\varphi_i\|_2 = 1$) or variance scaling ($1/m$).
-- `add_noise(y, sigma, rng=None)` & `add_noise_snr(y, snr_db, rng=None)`:
-  Adds AWGN to achieve a specified SNR in dB.
+### `matrices.py` (Unified Matrix Engine)
+- `generate_measurement_matrix(rows, cols, dist="sparse_rademacher", q=1.0, normalize="column", rng=None)`:
+  Unified mathematical generator for sensing matrices $\Phi \in \mathbb{R}^{m \times N}$ and validation projection matrices $\Psi \in \mathbb{R}^{r \times N}$.
+  Supports `"gaussian"`, `"rademacher"`, `"sparse_rademacher"`, and `"sparse_gaussian"` with arbitrary non-zero density $q \in (0, 1]$.
+  Supports column normalization (`normalize="column"`, $\|\mathbf{a}_j\|_2 = 1$) and variance normalization (`normalize="variance"`, $\mathbb{E}[A_{ij}^2] = 1/\text{rows}$).
+- `generate_sensing_matrix(...)` & `generate_projection_matrix(...)`: Backward-compatible wrappers for $\Phi$ and $\Psi$.
+- `add_noise(y, sigma, rng=None)` & `add_noise_snr(y, snr_db, rng=None)`: Adds Gaussian noise with specified standard deviation or target SNR in dB.
+- `compute_matrix_stats(A)`: Computes empirical density, non-zeros, and variance.
+- `budget_matched_dense_rows(r_sparse, q)`: Calculates $r_{\text{dense}} = \max(1, \text{round}(q \cdot r_{\text{sparse}}))$.
 
 ### `omp.py`
 - `run_omp_trajectory(Phi, y, max_iter, x_true=None, tol=1e-12)`:
@@ -85,15 +89,6 @@ PartIIProject/
   - `traj.true_errors`: squared error $E_j = \|\mathbf{x} - \mathbf{x}^j\|_2^2$.
   - `traj.error_sparsities`: active support size of error $\|\mathbf{x} - \mathbf{x}^j\|_0 \le s + j$.
   - `traj.residuals`: residual vectors $\mathbf{r}^j = \mathbf{y} - \Phi \mathbf{x}^j$.
-
-### `projections.py`
-- `generate_projection_matrix(r, N, matrix_type="sparse_rademacher", q=1.0, rng=None)`:
-  Generates validation matrix $\Psi \in \mathbb{R}^{r \times N}$:
-  - `"gaussian"`: $\mathcal{N}(0, 1/r)$
-  - `"dense_rademacher"`: $\pm 1/\sqrt{r}$
-  - `"sparse_rademacher"`: $0$ with probability $1-q$, and $\pm 1/\sqrt{qr}$ with probability $q/2$ each. Guarantees $\mathbb{E}[\Psi_{ij}^2] = 1/r$ (unbiased norm estimation for any density $q$).
-- `compute_projection_stats(Psi)`: Returns empirical non-zeros, density, and variance.
-- `budget_matched_dense_rows(r_sparse, q)`: Computes $r_{\text{dense}} = \max(1, \text{round}(q \cdot r))$.
 
 ### `metrics.py`
 - `compute_cv_errors(Psi, y_cv, iterates)`: Computes $\widehat{E}_j = \|\mathbf{y}_\Psi - \Psi \mathbf{x}^j\|_2^2$ vectorized.
@@ -153,12 +148,19 @@ venv/bin/python Gemini/src/experiments/analyze_separation_reversal.py --trials 5
 venv/bin/python Gemini/src/experiments/generate_heatmaps.py --trials 100 --N 512 --s 10 --m 120 --snr 25.0 --run_scaling
 ```
 
+### Stage 7b: Joint Sensing & Validation Sparsity Cross-Product
+```bash
+# Evaluates 35-cell cross-product grid q_Phi in [1.0 .. 0.05] x q_Psi in [1.0 .. 0.01] (Generates joint_sparsity_comparison.png)
+venv/bin/python Gemini/src/experiments/compare_joint_sparsity.py --trials 50 --N 512 --s 10 --m 120 --r 40 --snr 25.0
+```
+
 ---
 
 ## 5. Output Deliverables Directory (`Gemini/output/`)
 
 | Filename | Description |
 | :--- | :--- |
+| [`joint_sparsity_comparison.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/joint_sparsity_comparison.png) | 4-panel cross-product comparison: Sensing density $q_\Phi$ vs Validation density $q_\Psi$ |
 | [`single_trajectory.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/single_trajectory.png) | Single trajectory plot ($E_j$ vs $\widehat{E}_j$) with error sparsity panel |
 | [`ensemble_trajectories.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/ensemble_trajectories.png) | 100-trial ensemble median & IQR ribbon trajectories, Kendall $\tau$ boxplots, accuracy bars |
 | [`three_notions_vs_sparsity.png`](file:///home/aragorn/Documents/PartIIProject/Gemini/output/three_notions_vs_sparsity.png) | 4-panel comparison of Norm Error vs Ordering vs Selection vs Hierarchy Retention |

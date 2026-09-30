@@ -1,3 +1,0 @@
-N,s,m,r,q,expected_nonzeros_row,selection_accuracy,near_selection_accuracy,mean_kendall_tau
-128,4,49,20,1.0,128.0,0.5,0.5,0.8
-128,4,49,20,0.2,25.6,1.0,1.0,0.8545454545454546

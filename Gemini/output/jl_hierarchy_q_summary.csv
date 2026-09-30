@@ -1,3 +1,0 @@
-q,nnz_per_row,Level1_AllPairs_Strict,Level1_AllPairs_Fraction,Level2_Norms_Strict,Level2_Norms_Fraction,Level2B_Ward_Strict,Level2B_Ward_Fraction,Level3_Ordering_Tau90,Level3_Mean_Tau,Level4_Selection_Acc,Level4_Near_Acc
-1.0,128.0,0.0,0.9393939393939394,0.6,0.9272727272727274,1.0,1.0,0.6,0.9418181818181818,1.0,1.0
-0.2,25.6,0.0,0.606060606060606,0.0,0.4909090909090909,0.8,0.9818181818181818,0.6,0.9418181818181818,0.8,1.0

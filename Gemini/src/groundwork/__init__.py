@@ -2,20 +2,23 @@
 Groundwork package for Compressed Sensing Cross-Validation.
 Contains fundamental mathematical building blocks:
 - signals: sparse signal generation
-- sensing: sensing matrices and additive noise
+- matrices: unified measurement matrix generation (sensing Phi & validation Psi) and noise models
 - omp: Orthogonal Matching Pursuit trajectory tracking
-- projections: Gaussian, Rademacher, and Sparse Rademacher validation matrices
 - metrics: validation metrics, Kendall's tau, distortion variance, Ward bounds
 """
 
 from .signals import generate_sparse_signal, sparsity_of
-from .sensing import generate_sensing_matrix, add_noise, add_noise_snr
-from .omp import run_omp_trajectory, OMPTrajectory
-from .projections import (
+from .matrices import (
+    generate_measurement_matrix,
+    generate_sensing_matrix,
     generate_projection_matrix,
+    compute_matrix_stats,
     compute_projection_stats,
     budget_matched_dense_rows,
+    add_noise,
+    add_noise_snr,
 )
+from .omp import run_omp_trajectory, OMPTrajectory
 from .metrics import (
     compute_cv_errors,
     relative_norm_errors,
@@ -34,14 +37,16 @@ from .metrics import (
 __all__ = [
     "generate_sparse_signal",
     "sparsity_of",
+    "generate_measurement_matrix",
     "generate_sensing_matrix",
+    "generate_projection_matrix",
+    "compute_matrix_stats",
+    "compute_projection_stats",
+    "budget_matched_dense_rows",
     "add_noise",
     "add_noise_snr",
     "run_omp_trajectory",
     "OMPTrajectory",
-    "generate_projection_matrix",
-    "compute_projection_stats",
-    "budget_matched_dense_rows",
     "compute_cv_errors",
     "relative_norm_errors",
     "error_ratios",
