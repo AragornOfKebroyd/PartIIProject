@@ -92,13 +92,15 @@ def generate_measurement_matrix(
     else:
         raise ValueError(f"Unknown measurement matrix distribution: {dist}")
 
-    # Guard: Ensure no completely empty columns (every signal component should be measurable)
-    col_zero_mask = np.all(A == 0, axis=0)
-    if np.any(col_zero_mask):
-        empty_indices = np.where(col_zero_mask)[0]
-        for c in empty_indices:
-            rand_row = rng.integers(0, rows)
-            A[rand_row, c] = rng.choice([-1.0, 1.0])
+    # Guard: For column normalization (e.g. sensing matrix Phi), ensure no completely empty columns
+    # so that division by column norm is well-defined.
+    if normalize == "column":
+        col_zero_mask = np.all(A == 0, axis=0)
+        if np.any(col_zero_mask):
+            empty_indices = np.where(col_zero_mask)[0]
+            for c in empty_indices:
+                rand_row = rng.integers(0, rows)
+                A[rand_row, c] = rng.choice([-1.0, 1.0])
 
     # 2. Normalization
     if normalize == "column":

@@ -13,19 +13,22 @@ import sys
 import argparse
 import time
 
-# Ensure src directory is in sys.path
+# Ensure src directory and project root are in sys.path
 SRC_DIR = os.path.dirname(__file__)
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
+PROJECT_ROOT = os.path.abspath(os.path.join(SRC_DIR, "..", ".."))
 
-from experiments.plot_single_trajectory import run_and_plot_single_trajectory
-from experiments.run_trajectory_ensemble import run_ensemble
-from experiments.evaluate_three_notions import evaluate_three_notions
-from experiments.compare_matrix_families import compare_matrix_families
-from experiments.compare_budgets import run_budget_experiments
-from experiments.compare_jl_hierarchy import run_jl_hierarchy_experiments
-from experiments.generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
-from experiments.compare_joint_sparsity import run_joint_sparsity_cross_product
+for path_dir in (SRC_DIR, PROJECT_ROOT):
+    if path_dir not in sys.path:
+        sys.path.insert(0, path_dir)
+
+from experiments.p2_plot_single_trajectory import run_and_plot_single_trajectory
+from experiments.p2_run_trajectory_ensemble import run_ensemble
+from experiments.p3_evaluate_three_notions import evaluate_three_notions
+from experiments.p4_compare_matrix_families import compare_matrix_families
+from experiments.p5_compare_budgets import run_budget_experiments
+from experiments.p6_compare_jl_hierarchy import run_jl_hierarchy_experiments
+from experiments.p7_generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
+from experiments.p8_compare_joint_sparsity import run_joint_sparsity_cross_product
 
 
 def run_pipeline(mode: str = "fast", target_stage: int | None = None):
@@ -57,7 +60,11 @@ def run_pipeline(mode: str = "fast", target_stage: int | None = None):
     if target_stage is None or target_stage == 3:
         print("\n>>> [STAGE 3] Running Three Notions of Works vs Sparsity...")
         t0 = time.time()
-        q_vals = [1.0, 0.5, 0.2, 0.05] if mode == "fast" else [1.0, 0.7, 0.5, 0.3, 0.2, 0.1, 0.05, 0.02, 0.01]
+        q_vals = (
+            [1.0, 0.2, 0.05, 0.01, 0.005, 0.001, 0.0005]
+            if mode == "fast"
+            else [1.0, 0.7, 0.5, 0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005]
+        )
         evaluate_three_notions(q_values=q_vals, num_trials=trials, N=N, s=s, m=m, r=40, max_iter=max_iter, output_dir=output_dir)
         print(f"Stage 3 completed in {time.time() - t0:.2f}s")
 
@@ -80,7 +87,11 @@ def run_pipeline(mode: str = "fast", target_stage: int | None = None):
     if target_stage is None or target_stage == 6:
         print("\n>>> [STAGE 6] Testing General JL Requirement vs Task Hierarchy...")
         t0 = time.time()
-        q_vals = [1.0, 0.2] if mode == "fast" else [1.0, 0.7, 0.5, 0.3, 0.2, 0.1, 0.05, 0.02, 0.01]
+        q_vals = (
+            [1.0, 0.2, 0.01, 0.001]
+            if mode == "fast"
+            else [1.0, 0.7, 0.5, 0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005]
+        )
         r_vals = [20, 40] if mode == "fast" else [10, 20, 30, 40, 60, 80, 100]
         run_jl_hierarchy_experiments(q_values=q_vals, r_values=r_vals, num_trials=trials, N=N, s=s, m=m, max_iter=max_iter, output_dir=output_dir)
         print(f"Stage 6 completed in {time.time() - t0:.2f}s")

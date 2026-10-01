@@ -69,6 +69,7 @@ def run_ensemble(
     # Arrays to record per-iteration trajectory values across all trials: shape (T, p + 1)
     p = min(max_iter, m, N)
     E_true_all = np.zeros((num_trials, p + 1))
+    omp_res_all = np.zeros((num_trials, p + 1))
     E_hat_all = {key: np.zeros((num_trials, p + 1)) for key, _ in model_keys}
 
     trial_records = []
@@ -86,6 +87,7 @@ def run_ensemble(
         traj = run_omp_trajectory(Phi, y, max_iter=p, x_true=x_true)
         E_true = traj.true_errors
         E_true_all[t] = E_true
+        omp_res_all[t] = np.sum(traj.residuals ** 2, axis=1)
         j_true_star = int(np.argmin(E_true))
 
         # 3. Validation Projections & CV Estimates
@@ -146,8 +148,6 @@ def run_ensemble(
             print(f"Processed {t + 1}/{num_trials} trials...")
 
     df_trials = pd.DataFrame(trial_records)
-    trials_csv_path = os.path.join(output_dir, "ensemble_trials.csv")
-    df_trials.to_csv(trials_csv_path, index=False)
 
     # 5. Compute summary statistics across trials
     summary_list = []
@@ -166,8 +166,6 @@ def run_ensemble(
         })
 
     df_summary = pd.DataFrame(summary_list)
-    summary_csv_path = os.path.join(output_dir, "ensemble_summary.csv")
-    df_summary.to_csv(summary_csv_path, index=False)
 
     print("\n" + "=" * 70)
     print("ENSEMBLE SUMMARY STATISTICS ACROSS ALL TRIALS:")
@@ -187,14 +185,30 @@ def run_ensemble(
     true_med = np.median(E_true_all, axis=0)
     true_p25 = np.percentile(E_true_all, 25, axis=0)
     true_p75 = np.percentile(E_true_all, 75, axis=0)
-    ax1.semilogy(iterations, true_med, color="black", linestyle="-", linewidth=2.5, label="True Error $E_j$ (Median)")
+    ax1.semilogy(iterations, true_med, color="black", linestyle="-", linewidth=2.5, label=r"Real Error $\varepsilon_x^n$ (Median)")
     ax1.fill_between(iterations, true_p25, true_p75, color="black", alpha=0.15)
+
+    # OMP Sensing Residual ribbon
+    res_med = np.median(omp_res_all, axis=0)
+    res_p25 = np.percentile(omp_res_all, 25, axis=0)
+    res_p75 = np.percentile(omp_res_all, 75, axis=0)
+    ax1.semilogy(
+        iterations,
+        res_med,
+        color="darkorange",
+        linestyle=":",
+        linewidth=2.0,
+        marker="x",
+        markersize=4,
+        label=r"OMP Residual $\|\mathbf{r}^n\|_2^2$ (Median)",
+    )
+    ax1.fill_between(iterations, res_p25, res_p75, color="darkorange", alpha=0.10)
 
     colors = {
         "dense_gauss": ("royalblue", "--"),
         "dense_rad": ("forestgreen", ":"),
         "sparse_rad": ("crimson", "-."),
-        "ultra_sparse_rad": ("darkorange", "--"),
+        "ultra_sparse_rad": ("purple", "--"),
     }
 
     for key, name in model_keys:
@@ -203,13 +217,13 @@ def run_ensemble(
         med = np.median(arr, axis=0)
         p25 = np.percentile(arr, 25, axis=0)
         p75 = np.percentile(arr, 75, axis=0)
-        ax1.semilogy(iterations, med, color=color, linestyle=ls, linewidth=1.8, label=f"{name} (Median)")
+        ax1.semilogy(iterations, med, color=color, linestyle=ls, linewidth=1.8, label=rf"{name} $\varepsilon_{{\mathrm{{cv}}}}^n$ (Median)")
         ax1.fill_between(iterations, p25, p75, color=color, alpha=0.08)
 
     ax1.axvline(s, color="gray", linestyle=":", alpha=0.7, label=f"True Sparsity s={s}")
-    ax1.set_xlabel("OMP Iteration $j$", fontsize=11)
+    ax1.set_xlabel("OMP Iteration $n$", fontsize=11)
     ax1.set_ylabel(r"Squared Error ($\ell_2^2$)", fontsize=11)
-    ax1.set_title(f"Trajectory Ensemble Distributions over {num_trials} Random Realizations (Median & IQR Bands)\n(N={N}, s={s}, m={m}, r={r}, SNR={snr_db} dB)", fontsize=12)
+    ax1.set_title(f"Trajectory Ensemble over {num_trials} Realizations (Median & IQR Bands)\n(N={N}, s={s}, m={m}, r={r}, SNR={snr_db} dB)", fontsize=12)
     ax1.grid(True, which="both", linestyle="--", alpha=0.4)
     ax1.legend(loc="upper right", fontsize=9, ncol=2)
 
@@ -218,11 +232,11 @@ def run_ensemble(
     tau_data = [df_trials[df_trials["model_key"] == key]["kendall_tau"].values for key, _ in model_keys]
     labels = [name for _, name in model_keys]
     bp = ax2.boxplot(tau_data, tick_labels=labels, patch_artist=True)
-    box_colors = ["lightblue", "lightgreen", "salmon", "wheat"]
+    box_colors = ["lightblue", "lightgreen", "salmon", "plum"]
     for patch, c in zip(bp['boxes'], box_colors):
         patch.set_facecolor(c)
-    ax2.set_ylabel("Kendall's Rank Correlation $\\tau$", fontsize=11)
-    ax2.set_title("Ordering Preservation Distribution (Kendall's $\\tau$)", fontsize=12)
+    ax2.set_ylabel(r"Kendall's $\tau$", fontsize=11)
+    ax2.set_title(r"Ordering Preservation (Kendall's $\tau$)", fontsize=12)
     ax2.grid(True, linestyle="--", alpha=0.4)
     ax2.tick_params(axis="x", rotation=15)
 
@@ -236,20 +250,18 @@ def run_ensemble(
                      xy=(bar.get_x() + bar.get_width() / 2, height),
                      xytext=(0, 3), textcoords="offset points",
                      ha='center', va='bottom', fontsize=10, fontweight="bold")
-    ax3.set_ylabel("Selection Accuracy $P(\\hat{j} = j^*)$ (%)", fontsize=11)
+    ax3.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11)
     ax3.set_ylim(0, 105)
-    ax3.set_title("Best-Iterate Model Selection Accuracy Rate", fontsize=12)
+    ax3.set_title(r"Best-Iterate Model Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$", fontsize=12)
     ax3.grid(True, linestyle="--", alpha=0.4, axis="y")
     ax3.tick_params(axis="x", rotation=15)
 
     fig.subplots_adjust(left=0.08, right=0.96, top=0.92, bottom=0.10, hspace=0.35, wspace=0.25)
-    plot_path = os.path.join(output_dir, "ensemble_trajectories.png")
+    plot_path = os.path.join(output_dir, "p2_ensemble_trajectories.png")
     plt.savefig(plot_path, dpi=200)
     plt.close()
 
-    print(f"Saved ensemble visualization to: {plot_path}")
-    print(f"Saved summary metrics to: {summary_csv_path}")
-    print(f"Saved trial data to: {trials_csv_path}\n")
+    print(f"Saved ensemble visualization to: {plot_path}\n")
 
     return df_summary, df_trials
 

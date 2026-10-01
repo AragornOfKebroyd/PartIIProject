@@ -107,8 +107,8 @@ def run_separation_reversal_analysis(
     grouped["bin_center"] = grouped["bin"].map(bin_map)
     grouped.rename(columns={"mean": "reversal_probability", "count": "pair_count"}, inplace=True)
 
-    summary_csv_path = os.path.join(output_dir, "pairwise_reversal_summary.csv")
-    grouped.to_csv(summary_csv_path, index=False)
+    # summary_csv_path = os.path.join(output_dir, "pairwise_reversal_summary.csv")
+    # grouped.to_csv(summary_csv_path, index=False)
 
     # Plotting
     fig, ax = plt.subplots(figsize=(9, 6))
@@ -150,12 +150,12 @@ def run_separation_reversal_analysis(
     ax.legend(fontsize=9, loc="upper right")
 
     fig.tight_layout()
-    plot_path = os.path.join(output_dir, "pairwise_reversal_vs_separation.png")
+    plot_path = os.path.join(output_dir, "p8_pairwise_reversal_vs_separation.png")
     plt.savefig(plot_path, dpi=200)
     plt.close()
 
     print(f"Saved reversal plot to: {plot_path}")
-    print(f"Saved reversal data to: {summary_csv_path}")
+    # print(f"Saved reversal data to: {summary_csv_path}")
 
     return grouped, df_pairs
 

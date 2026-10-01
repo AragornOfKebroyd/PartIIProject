@@ -13,15 +13,15 @@ Contains experimental stages and evaluation routines:
 - compare_joint_sparsity: Joint sensing & validation matrix sparsity cross-product
 """
 
-from .plot_single_trajectory import run_and_plot_single_trajectory
-from .run_trajectory_ensemble import run_ensemble
-from .evaluate_three_notions import evaluate_three_notions
-from .compare_matrix_families import compare_matrix_families
-from .compare_budgets import run_budget_experiments
-from .compare_jl_hierarchy import run_jl_hierarchy_experiments, compute_all_pairs_jl
-from .analyze_separation_reversal import run_separation_reversal_analysis
-from .generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
-from .compare_joint_sparsity import run_joint_sparsity_cross_product
+from .p2_plot_single_trajectory import run_and_plot_single_trajectory
+from .p2_run_trajectory_ensemble import run_ensemble
+from .p3_evaluate_three_notions import evaluate_three_notions
+from .p4_compare_matrix_families import compare_matrix_families
+from .p5_compare_budgets import run_budget_experiments
+from .p6_compare_jl_hierarchy import run_jl_hierarchy_experiments, compute_all_pairs_jl
+from .p8_analyze_separation_reversal import run_separation_reversal_analysis
+from .p7_generate_heatmaps import run_heatmap_grid, run_regime_scaling_sweep
+from .p8_compare_joint_sparsity import run_joint_sparsity_cross_product
 
 __all__ = [
     "run_and_plot_single_trajectory",

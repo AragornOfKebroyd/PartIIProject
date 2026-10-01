@@ -19,7 +19,7 @@ def generate_sparse_signal(
         Sparsity level (number of non-zero entries).
     coeff_dist : str
         Distribution for non-zero coefficients:
-        - "gaussian": N(0, 1) or specified loc/scale via kwargs.
+        - "gaussian": N(loc, scale) with realistic default loc=20.0, scale=6.0 (or specified via kwargs).
         - "rademacher": Uniform choice of +1 or -1.
         - "uniform": Uniform in [-b, -a] U [a, b] (default a=0.5, b=2.0).
         - "decay": Power-law magnitude decay k^(-alpha) with random signs.
@@ -43,8 +43,8 @@ def generate_sparse_signal(
     x = np.zeros(N, dtype=float)
 
     if coeff_dist == "gaussian":
-        loc = kwargs.get("loc", 0.0)
-        scale = kwargs.get("scale", 1.0)
+        loc = kwargs.get("loc", 20.0)
+        scale = kwargs.get("scale", 6.0)
         values = rng.normal(loc=loc, scale=scale, size=s)
     elif coeff_dist == "rademacher":
         values = rng.choice([-1.0, 1.0], size=s)

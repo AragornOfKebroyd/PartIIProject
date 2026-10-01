@@ -54,9 +54,11 @@ def run_heatmap_grid(
     Run 2D grid sweep over (q, r) and compute phase transition statistics.
     """
     if q_values is None:
-        q_values = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
+        # Doubled resolution across matrix density q: 14 logarithmically spaced points
+        q_values = [1.0, 0.70, 0.50, 0.35, 0.25, 0.18, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02, 0.014, 0.01]
     if r_values is None:
-        r_values = [10, 20, 30, 40, 60, 80, 100, 150, 200]
+        # Doubled resolution across validation measurements budget r: 18 points
+        r_values = [10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
 
     if output_dir is None:
         output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "output"))
@@ -134,93 +136,116 @@ def run_heatmap_grid(
                 "mean_excess_error": float(np.mean(excesses)),
             })
 
-            if cell_idx % 14 == 0 or cell_idx == total_cells:
+            if cell_idx % 25 == 0 or cell_idx == total_cells:
                 print(f"Evaluated {cell_idx}/{total_cells} grid cells...")
 
     df_grid = pd.DataFrame(grid_results)
-    grid_csv_path = os.path.join(output_dir, "heatmap_grid_results.csv")
-    df_grid.to_csv(grid_csv_path, index=False)
-    print(f"Saved full grid data to: {grid_csv_path}")
 
     # =========================================================================
-    # PLOTTING 2D HEATMAPS
+    # PLOTTING 2D HEATMAPS (Clean Color Fields, No Contour Lines)
     # =========================================================================
-    # Pivot tables for plotting: rows = r (y-axis), cols = q (x-axis)
     pivot_acc = df_grid.pivot(index="r", columns="q", values="selection_accuracy") * 100
     pivot_near = df_grid.pivot(index="r", columns="q", values="near_selection_accuracy") * 100
     pivot_tau = df_grid.pivot(index="r", columns="q", values="mean_kendall_tau")
     pivot_rel = df_grid.pivot(index="r", columns="q", values="pre_conv_rel_error_med")
 
-    # Figure 1: Selection Accuracy & Near Selection Heatmaps
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
-
-    # Log coordinates for smooth contour plotting
     q_arr = np.array(q_values)
     r_arr = np.array(r_values)
     Q, R = np.meshgrid(q_arr, r_arr)
 
+    # -------------------------------------------------------------------------
+    # Figure 1: 2-Panel Selection Accuracy & Near Selection Heatmaps
+    # -------------------------------------------------------------------------
+    fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
     # Panel 1: Exact Best-Iterate Selection Accuracy
-    im1 = ax1.pcolormesh(Q, R, pivot_acc.values, cmap="viridis", shading="auto", vmin=30, vmax=100)
-    cbar1 = fig.colorbar(im1, ax=ax1)
-    cbar1.set_label("Selection Accuracy $P(\\hat{j}=j^*)$ (%)", fontsize=11)
-
-    # Add contour boundary lines for 80% and 90% accuracy
-    cs1 = ax1.contour(Q, R, pivot_acc.values, levels=[70, 80, 90], colors=["white", "cyan", "gold"], linewidths=[1.5, 2.0, 2.5])
-    ax1.clabel(cs1, inline=True, fontsize=10, fmt="%d%%")
-
+    im1 = ax1.pcolormesh(Q, R, pivot_acc.values, cmap="viridis", shading="auto", vmin=30, vmax=100, edgecolors="none")
+    cbar1 = fig1.colorbar(im1, ax=ax1)
+    cbar1.set_label(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
     ax1.set_xscale("log")
-    ax1.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11)
-    ax1.set_ylabel("Validation Measurements $r$", fontsize=11)
-    ax1.set_title("Exact Best-Iterate Selection Accuracy Phase Transition", fontsize=12, fontweight="bold")
+    ax1.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
+    ax1.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
+    ax1.set_title(r"Exact Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ Phase Transition", fontsize=12, fontweight="bold")
+    ax1.grid(False)
 
     # Panel 2: Near Match Selection Accuracy (within +/- 1 iterate)
-    im2 = ax2.pcolormesh(Q, R, pivot_near.values, cmap="viridis", shading="auto", vmin=50, vmax=100)
-    cbar2 = fig.colorbar(im2, ax=ax2)
-    cbar2.set_label("Near Selection Accuracy $P(|\\hat{j}-j^*| \\leq 1)$ (%)", fontsize=11)
-
-    cs2 = ax2.contour(Q, R, pivot_near.values, levels=[85, 90, 95], colors=["white", "cyan", "gold"], linewidths=[1.5, 2.0, 2.5])
-    ax2.clabel(cs2, inline=True, fontsize=10, fmt="%d%%")
-
+    im2 = ax2.pcolormesh(Q, R, pivot_near.values, cmap="viridis", shading="auto", vmin=50, vmax=100, edgecolors="none")
+    cbar2 = fig1.colorbar(im2, ax=ax2)
+    cbar2.set_label(r"Near Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ (%)", fontsize=11, fontweight="bold")
     ax2.set_xscale("log")
-    ax2.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11)
-    ax2.set_ylabel("Validation Measurements $r$", fontsize=11)
-    ax2.set_title(r"Near-Optimal Selection Accuracy $(\pm 1\ \mathrm{Iterate})$", fontsize=12, fontweight="bold")
+    ax2.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
+    ax2.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
+    ax2.set_title(r"Near-Optimal Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$", fontsize=12, fontweight="bold")
+    ax2.grid(False)
 
-    fig.subplots_adjust(left=0.07, right=0.95, top=0.92, bottom=0.12, wspace=0.25)
-    fig1_path = os.path.join(output_dir, "heatmap_selection_accuracy.png")
-    plt.savefig(fig1_path, dpi=200)
-    plt.close()
+    fig1.subplots_adjust(left=0.07, right=0.95, top=0.92, bottom=0.12, wspace=0.25)
+    fig1_path = os.path.join(output_dir, "p7_heatmap_selection_accuracy.png")
+    fig1.savefig(fig1_path, dpi=200)
+    plt.close(fig1)
     print(f"Saved Selection Accuracy Heatmap to: {fig1_path}")
 
-    # Figure 2: Kendall's Tau & Pre-convergence Relative Error
+    # -------------------------------------------------------------------------
+    # Figure 2: 2-Panel Kendall's Tau & Pre-convergence Relative Error
+    # -------------------------------------------------------------------------
     fig2, (ax3, ax4) = plt.subplots(1, 2, figsize=(16, 7))
 
-    im3 = ax3.pcolormesh(Q, R, pivot_tau.values, cmap="plasma", shading="auto", vmin=0.70, vmax=1.0)
+    im3 = ax3.pcolormesh(Q, R, pivot_tau.values, cmap="plasma", shading="auto", vmin=0.70, vmax=1.0, edgecolors="none")
     cbar3 = fig2.colorbar(im3, ax=ax3)
-    cbar3.set_label("Mean Kendall's Rank Correlation $\\tau$", fontsize=11)
-
-    cs3 = ax3.contour(Q, R, pivot_tau.values, levels=[0.85, 0.90, 0.95], colors=["white", "cyan", "yellow"], linewidths=[1.5, 2.0, 2.5])
-    ax3.clabel(cs3, inline=True, fontsize=10, fmt="%.2f")
-
+    cbar3.set_label(r"Mean Kendall's $\tau$ (between $[\varepsilon_x^n]$ and $[\varepsilon_{\mathrm{cv}}^n]$)", fontsize=11, fontweight="bold")
     ax3.set_xscale("log")
-    ax3.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11)
-    ax3.set_ylabel("Validation Measurements $r$", fontsize=11)
-    ax3.set_title("Ordering Preservation (Kendall's $\\tau$) Operational Regime", fontsize=12, fontweight="bold")
+    ax3.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
+    ax3.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
+    ax3.set_title(r"Ordering Preservation (Mean Kendall's $\tau$) Operational Regime", fontsize=12, fontweight="bold")
+    ax3.grid(False)
 
-    im4 = ax4.pcolormesh(Q, R, pivot_rel.values, cmap="magma_r", shading="auto", vmin=0.10, vmax=0.70)
+    im4 = ax4.pcolormesh(Q, R, pivot_rel.values, cmap="magma_r", shading="auto", vmin=0.10, vmax=0.70, edgecolors="none")
     cbar4 = fig2.colorbar(im4, ax=ax4)
-    cbar4.set_label(r"Pre-Convergence Relative Error $\frac{|\widehat{E}_j - E_j|}{E_j}$", fontsize=11)
-
+    cbar4.set_label(r"Pre-Convergence Relative Error $\frac{|\varepsilon_{\mathrm{cv}}^n - \varepsilon_x^n|}{\varepsilon_x^n}$", fontsize=11, fontweight="bold")
     ax4.set_xscale("log")
-    ax4.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11)
-    ax4.set_ylabel("Validation Measurements $r$", fontsize=11)
-    ax4.set_title("Signal Norm Estimation Relative Error ($j \\leq j^*$)", fontsize=12, fontweight="bold")
+    ax4.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
+    ax4.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
+    ax4.set_title(r"Signal Norm Estimation Relative Error ($n \leq n^*$)", fontsize=12, fontweight="bold")
+    ax4.grid(False)
 
     fig2.subplots_adjust(left=0.07, right=0.95, top=0.92, bottom=0.12, wspace=0.25)
-    fig2_path = os.path.join(output_dir, "heatmap_kendall_tau.png")
-    plt.savefig(fig2_path, dpi=200)
-    plt.close()
+    fig2_path = os.path.join(output_dir, "p7_heatmap_kendall_tau.png")
+    fig2.savefig(fig2_path, dpi=200)
+    plt.close(fig2)
     print(f"Saved Kendall's Tau Heatmap to: {fig2_path}")
+
+    # -------------------------------------------------------------------------
+    # Standalone Individual Heatmaps (Single Panel per Metric)
+    # -------------------------------------------------------------------------
+    standalone_specs = [
+        ("p7_1_selection_accuracy_heatmap.png", pivot_acc.values, "viridis", 30, 100,
+         r"Exact Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ Phase Transition",
+         r"Selection Accuracy $\mathbb{P}(\hat{n}=n^*)$ (%)"),
+        ("p7_2_near_selection_heatmap.png", pivot_near.values, "viridis", 50, 100,
+         r"Near-Optimal Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ Phase Transition",
+         r"Near Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ (%)"),
+        ("p7_3_kendall_tau_heatmap.png", pivot_tau.values, "plasma", 0.70, 1.0,
+         r"Ordering Preservation (Mean Kendall's $\tau$) Operational Regime",
+         r"Mean Kendall's $\tau$ (between $[\varepsilon_x^n]$ and $[\varepsilon_{\mathrm{cv}}^n]$)"),
+        ("p7_4_norm_error_heatmap.png", pivot_rel.values, "magma_r", 0.10, 0.70,
+         r"Signal Norm Estimation Relative Error ($n \leq n^*$)",
+         r"Median Relative Error $\frac{|\varepsilon_{\mathrm{cv}}^n - \varepsilon_x^n|}{\varepsilon_x^n}$"),
+    ]
+
+    for fname, data_vals, cmap_name, vmin_val, vmax_val, title_str, cbar_str in standalone_specs:
+        fig_s, ax_s = plt.subplots(figsize=(8.5, 6.5))
+        im_s = ax_s.pcolormesh(Q, R, data_vals, cmap=cmap_name, shading="auto", vmin=vmin_val, vmax=vmax_val, edgecolors="none")
+        cbar_s = fig_s.colorbar(im_s, ax=ax_s)
+        cbar_s.set_label(cbar_str, fontsize=11, fontweight="bold")
+        ax_s.set_xscale("log")
+        ax_s.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
+        ax_s.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
+        ax_s.set_title(title_str, fontsize=12, fontweight="bold", pad=12)
+        ax_s.grid(False)
+        fig_s.tight_layout()
+        s_path = os.path.join(output_dir, fname)
+        fig_s.savefig(s_path, dpi=200)
+        plt.close(fig_s)
+        print(f"Saved standalone heatmap: {s_path}")
 
     return df_grid
 
@@ -309,8 +334,8 @@ def run_regime_scaling_sweep(
                 })
 
     df_scaling = pd.DataFrame(scaling_records)
-    scaling_csv = os.path.join(output_dir, "heatmap_regime_scaling.csv")
-    df_scaling.to_csv(scaling_csv, index=False)
+    # scaling_csv = os.path.join(output_dir, "heatmap_regime_scaling.csv")
+    # df_scaling.to_csv(scaling_csv, index=False)
 
     # Plotting scaling curves
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
@@ -325,8 +350,8 @@ def run_regime_scaling_sweep(
         sub = df_scaling[(df_scaling["N"] == N) & (df_scaling["q"] == q_target)]
         if len(sub) > 0:
             ax1.plot(sub["s"], sub["selection_accuracy"] * 100, "-o", color=colors_N[N], linewidth=2.0, label=f"N={N} (q={q_target})")
-    ax1.set_xlabel("Signal Sparsity $s$", fontsize=11)
-    ax1.set_ylabel("Selection Accuracy $P(\\hat{j}=j^*)$ (%)", fontsize=11)
+    ax1.set_xlabel("Signal Sparsity $s$", fontsize=11, fontweight="bold")
+    ax1.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
     ax1.set_ylim(40, 105)
     ax1.set_title(f"Scaling with Signal Sparsity $s$ (Sparsity $q={q_target}$)", fontsize=12, fontweight="bold")
     ax1.grid(True, linestyle="--", alpha=0.4)
@@ -339,15 +364,15 @@ def run_regime_scaling_sweep(
         if len(sub) > 0:
             ax2.plot(sub["q"], sub["selection_accuracy"] * 100, "-s", color=colors_N[N], linewidth=2.0, label=f"N={N} (s={s_target})")
     ax2.set_xscale("log")
-    ax2.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11)
-    ax2.set_ylabel("Selection Accuracy $P(\\hat{j}=j^*)$ (%)", fontsize=11)
+    ax2.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
+    ax2.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
     ax2.set_ylim(40, 105)
     ax2.set_title(f"Scaling with Ambient Dimension $N$ ($s={s_target}$)", fontsize=12, fontweight="bold")
     ax2.grid(True, which="both", linestyle="--", alpha=0.4)
     ax2.legend(fontsize=9)
 
     fig.subplots_adjust(left=0.08, right=0.95, top=0.92, bottom=0.12, wspace=0.25)
-    scaling_plot = os.path.join(output_dir, "heatmap_regime_scaling.png")
+    scaling_plot = os.path.join(output_dir, "p7_heatmap_regime_scaling.png")
     plt.savefig(scaling_plot, dpi=200)
     plt.close()
     print(f"Saved Scaling Plot to: {scaling_plot}")

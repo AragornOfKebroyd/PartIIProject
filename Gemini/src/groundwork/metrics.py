@@ -214,15 +214,25 @@ def jl_isometry_stats(
     ratios = proj_sq_norms / true_sq_norms
 
     success_rates = {}
+    simultaneous_rates = {}
+    fractional_rates = {}
     for eps in epsilons:
         in_bounds = (ratios >= (1.0 - eps)) & (ratios <= (1.0 + eps))
-        success_rates[eps] = float(np.mean(in_bounds))
+        simul = bool(np.all(in_bounds))
+        frac = float(np.mean(in_bounds))
+        simultaneous_rates[eps] = simul
+        fractional_rates[eps] = frac
+        # Simultaneous guarantee across all trajectory iterates (classical JL embedding condition)
+        success_rates[eps] = simul
 
     return {
         "mean_ratio": float(np.mean(ratios)),
         "std_ratio": float(np.std(ratios)),
         "median_ratio": float(np.median(ratios)),
         "success_rates": success_rates,
+        "simultaneous_rates": simultaneous_rates,
+        "fractional_rates": fractional_rates,
+        "ratios": ratios,
     }
 
 

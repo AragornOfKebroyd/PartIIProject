@@ -13,6 +13,8 @@ if [ ! -f "${PYTHON}" ]; then
     exit 1
 fi
 
+export PYTHONPATH="${PROJECT_ROOT}:${SCRIPT_DIR}/src:${PYTHONPATH}"
+
 echo "===================================================================="
 echo "Running Unit Test Suite..."
 echo "===================================================================="

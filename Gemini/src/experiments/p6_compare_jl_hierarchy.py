@@ -313,10 +313,10 @@ def run_jl_hierarchy_experiments(
     df_hierarchy_r_summary = pd.DataFrame(summary_r_list)
 
     # Save summaries
-    csv_q_path = os.path.join(output_dir, "jl_hierarchy_q_summary.csv")
-    csv_r_path = os.path.join(output_dir, "jl_hierarchy_r_summary.csv")
-    df_hierarchy_q_summary.to_csv(csv_q_path, index=False)
-    df_hierarchy_r_summary.to_csv(csv_r_path, index=False)
+    # csv_q_path = os.path.join(output_dir, "jl_hierarchy_q_summary.csv")
+    # csv_r_path = os.path.join(output_dir, "jl_hierarchy_r_summary.csv")
+    # df_hierarchy_q_summary.to_csv(csv_q_path, index=False)
+    # df_hierarchy_r_summary.to_csv(csv_r_path, index=False)
 
     print("\n" + "=" * 95)
     print("STAGE 6 SUMMARY TABLE: THE 4-LEVEL HIERARCHY SUCCESS RATES (%) VS DENSITY q (r=50)")
@@ -411,12 +411,12 @@ def run_jl_hierarchy_experiments(
     ax_levels_bar.tick_params(axis="x", rotation=15)
 
     fig.subplots_adjust(left=0.07, right=0.95, top=0.93, bottom=0.10, hspace=0.35, wspace=0.25)
-    plot_path = os.path.join(output_dir, "jl_hierarchy_comparison.png")
+    plot_path = os.path.join(output_dir, "p6_jl_hierarchy_comparison.png")
     plt.savefig(plot_path, dpi=200)
     plt.close()
 
     print(f"\nSaved JL hierarchy visualization to: {plot_path}")
-    print(f"Saved summary tables to: {csv_q_path} and {csv_r_path}\n")
+    # print(f"Saved summary tables to: {csv_q_path} and {csv_r_path}\n")
 
     return df_hierarchy_q_summary, df_hierarchy_r_summary, df_hierarchy_q_trials
 

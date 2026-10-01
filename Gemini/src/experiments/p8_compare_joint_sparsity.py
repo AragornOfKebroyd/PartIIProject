@@ -177,12 +177,12 @@ def run_joint_sparsity_cross_product(
     df_summary = pd.DataFrame(summary_list).sort_values(by=["q_phi", "q_psi"], ascending=[False, False])
 
     # Save CSVs
-    csv_trials_path = os.path.join(output_dir, "joint_sparsity_cross_product_trials.csv")
-    csv_summary_path = os.path.join(output_dir, "joint_sparsity_cross_product_summary.csv")
-    df_trials.to_csv(csv_trials_path, index=False)
-    df_summary.to_csv(csv_summary_path, index=False)
-    print(f"\nSaved trial data to: {csv_trials_path}")
-    print(f"Saved summary data to: {csv_summary_path}")
+    # csv_trials_path = os.path.join(output_dir, "joint_sparsity_cross_product_trials.csv")
+    # csv_summary_path = os.path.join(output_dir, "joint_sparsity_cross_product_summary.csv")
+    # df_trials.to_csv(csv_trials_path, index=False)
+    # df_summary.to_csv(csv_summary_path, index=False)
+    # print(f"\nSaved trial data to: {csv_trials_path}")
+    # print(f"Saved summary data to: {csv_summary_path}")
 
     # Plot comprehensive 4-panel visual comparison
     _plot_joint_sparsity_results(df_summary, q_phi_values, q_psi_values, output_dir, N, s, m, r, snr_db)
@@ -217,6 +217,7 @@ def _plot_joint_sparsity_results(
     q_psi_labels = [f"{q:.2f}" for q in piv_acc.columns]
 
     # Panel 1: Selection Accuracy Heatmap
+    # Panel 1: Selection Accuracy Heatmap
     ax1 = axes[0, 0]
     im1 = ax1.imshow(piv_acc.values, cmap="viridis", aspect="auto", vmin=30, vmax=100)
     ax1.set_xticks(range(len(q_psi_labels)))
@@ -225,8 +226,8 @@ def _plot_joint_sparsity_results(
     ax1.set_yticklabels(q_phi_labels, fontsize=10)
     ax1.set_xlabel(r"Validation Matrix Density $q_{\Psi}$", fontsize=11, fontweight="bold")
     ax1.set_ylabel(r"Sensing Matrix Density $q_{\Phi}$", fontsize=11, fontweight="bold")
-    ax1.set_title(r"(A) Model Selection Accuracy $P(\hat{j} = j^*)$ (%)", fontsize=12, fontweight="bold")
-    plt.colorbar(im1, ax=ax1, label="Accuracy (%)")
+    ax1.set_title(r"(A) Model Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=12, fontweight="bold")
+    plt.colorbar(im1, ax=ax1, label=r"Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)")
 
     # Annotate values inside heatmap
     for i in range(len(q_phi_labels)):
@@ -245,7 +246,7 @@ def _plot_joint_sparsity_results(
     ax2.set_xlabel(r"Validation Matrix Density $q_{\Psi}$", fontsize=11, fontweight="bold")
     ax2.set_ylabel(r"Sensing Matrix Density $q_{\Phi}$", fontsize=11, fontweight="bold")
     ax2.set_title(r"(B) Kendall's Rank Correlation $\tau$ (Trajectory Ordering)", fontsize=12, fontweight="bold")
-    plt.colorbar(im2, ax=ax2, label=r"Rank Correlation $\tau$")
+    plt.colorbar(im2, ax=ax2, label=r"Kendall's $\tau$")
 
     for i in range(len(q_phi_labels)):
         for j in range(len(q_psi_labels)):
@@ -271,7 +272,7 @@ def _plot_joint_sparsity_results(
 
     ax3.set_xscale("log")
     ax3.set_xlabel(r"Validation Matrix Density $q_{\Psi}$ (log scale)", fontsize=11, fontweight="bold")
-    ax3.set_ylabel("Selection Accuracy (%)", fontsize=11, fontweight="bold")
+    ax3.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
     ax3.set_title(r"(C) Validation Sparsity Tolerance Across Sensing Densities", fontsize=12, fontweight="bold")
     ax3.grid(True, which="both", linestyle="--", alpha=0.4)
     ax3.legend(fontsize=9, loc="lower left")
@@ -288,17 +289,25 @@ def _plot_joint_sparsity_results(
     x_vals = np.arange(len(oracle_by_phi))
     width = 0.25
 
-    ax4.bar(x_vals - width, oracle_by_phi.values, width, label="OMP Oracle Error", color="#2b5c8f", alpha=0.85)
-    ax4.bar(x_vals, excess_by_phi_dense.loc[oracle_by_phi.index].values, width, label=rf"Excess Error ($q_{{\Psi}}={q_psi_max:.2f}$)", color="#3caea3", alpha=0.85)
-    ax4.bar(x_vals + width, excess_by_phi_sparse.loc[oracle_by_phi.index].values, width, label=rf"Excess Error ($q_{{\Psi}}={q_psi_min:.2f}$)", color="#ed553b", alpha=0.85)
+    b1 = ax4.bar(x_vals - width, oracle_by_phi.values, width, label=r"Oracle Error $\varepsilon_{\mathrm{or}}$", color="#2b5c8f", alpha=0.85)
+    b2 = ax4.bar(x_vals, excess_by_phi_dense.loc[oracle_by_phi.index].values, width, label=rf"Excess Error ($q_{{\Psi}}={q_psi_max:.2f}$)", color="#3caea3", alpha=0.85)
+    b3 = ax4.bar(x_vals + width, excess_by_phi_sparse.loc[oracle_by_phi.index].values, width, label=rf"Excess Error ($q_{{\Psi}}={q_psi_min:.2f}$)", color="#ed553b", alpha=0.85)
+
+    for bar in list(b1) + list(b2) + list(b3):
+        h = bar.get_height()
+        if h > 0:
+            ax4.text(bar.get_x() + bar.get_width() / 2.0, h * 1.15, f"{h:.2f}" if h < 10 else f"{h:.1f}",
+                     ha="center", va="bottom", fontsize=7.5, fontweight="bold")
 
     ax4.set_xticks(x_vals)
     ax4.set_xticklabels([f"{q:.2f}" for q in oracle_by_phi.index], fontsize=10)
     ax4.set_xlabel(r"Sensing Matrix Density $q_{\Phi}$", fontsize=11, fontweight="bold")
-    ax4.set_ylabel("Mean Squared Error", fontsize=11, fontweight="bold")
-    ax4.set_title(r"(D) Oracle Reconstruction Error vs Validation Excess Error", fontsize=12, fontweight="bold")
-    ax4.grid(True, axis="y", linestyle="--", alpha=0.4)
-    ax4.legend(fontsize=9, loc="upper right")
+    ax4.set_ylabel(r"Mean Squared Error (log scale)", fontsize=11, fontweight="bold")
+    ax4.set_yscale("log")
+    ax4.set_ylim(0.08, 600)
+    ax4.set_title(r"(D) Oracle Error $\varepsilon_{\mathrm{or}}$ vs Excess Error $\varepsilon_x^{\hat{n}} - \varepsilon_x^{n^*}$", fontsize=12, fontweight="bold")
+    ax4.grid(True, which="both", axis="y", linestyle="--", alpha=0.4)
+    ax4.legend(fontsize=8.5, loc="upper right")
 
     fig.suptitle(
         f"Joint Sparsity Interplay: Sensing Matrix $\\Phi$ vs Validation Matrix $\\Psi$ ($N={N}, s={s}, m={m}, r={r}$)",
@@ -308,10 +317,97 @@ def _plot_joint_sparsity_results(
     )
     fig.tight_layout()
 
-    plot_path = os.path.join(output_dir, "joint_sparsity_comparison.png")
+    plot_path = os.path.join(output_dir, "p8_joint_sparsity_comparison.png")
     plt.savefig(plot_path, dpi=200, bbox_inches="tight")
     plt.close()
     print(f"Saved joint sparsity figure to: {plot_path}")
+
+    # Also save standalone single-panel figures for slides
+    # Panel 1 standalone
+    fig1, a1 = plt.subplots(figsize=(7, 6))
+    im1_s = a1.imshow(piv_acc.values, cmap="viridis", aspect="auto", vmin=30, vmax=100)
+    a1.set_xticks(range(len(q_psi_labels)))
+    a1.set_xticklabels(q_psi_labels, fontsize=10)
+    a1.set_yticks(range(len(q_phi_labels)))
+    a1.set_yticklabels(q_phi_labels, fontsize=10)
+    a1.set_xlabel(r"Validation Matrix Density $q_{\Psi}$", fontsize=11, fontweight="bold")
+    a1.set_ylabel(r"Sensing Matrix Density $q_{\Phi}$", fontsize=11, fontweight="bold")
+    a1.set_title(r"Model Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=12, fontweight="bold")
+    plt.colorbar(im1_s, ax=a1, label=r"Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)")
+    for i in range(len(q_phi_labels)):
+        for j in range(len(q_psi_labels)):
+            val = piv_acc.values[i, j]
+            color = "white" if val < 70 else "black"
+            a1.text(j, i, f"{val:.1f}%", ha="center", va="center", color=color, fontsize=9, fontweight="bold")
+    fig1.tight_layout()
+    fig1.savefig(os.path.join(output_dir, "p8_1_selection_accuracy.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig1)
+
+    # Panel 2 standalone
+    fig2, a2 = plt.subplots(figsize=(7, 6))
+    im2_s = a2.imshow(piv_tau.values, cmap="magma", aspect="auto", vmin=0.6, vmax=1.0)
+    a2.set_xticks(range(len(q_psi_labels)))
+    a2.set_xticklabels(q_psi_labels, fontsize=10)
+    a2.set_yticks(range(len(q_phi_labels)))
+    a2.set_yticklabels(q_phi_labels, fontsize=10)
+    a2.set_xlabel(r"Validation Matrix Density $q_{\Psi}$", fontsize=11, fontweight="bold")
+    a2.set_ylabel(r"Sensing Matrix Density $q_{\Phi}$", fontsize=11, fontweight="bold")
+    a2.set_title(r"Kendall's Rank Correlation $\tau$ (Trajectory Ordering)", fontsize=12, fontweight="bold")
+    plt.colorbar(im2_s, ax=a2, label=r"Kendall's $\tau$")
+    for i in range(len(q_phi_labels)):
+        for j in range(len(q_psi_labels)):
+            val = piv_tau.values[i, j]
+            color = "white" if val < 0.8 else "black"
+            a2.text(j, i, f"{val:.3f}", ha="center", va="center", color=color, fontsize=9, fontweight="bold")
+    fig2.tight_layout()
+    fig2.savefig(os.path.join(output_dir, "p8_2_kendall_tau.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig2)
+
+    # Panel 3 standalone
+    fig3, a3 = plt.subplots(figsize=(7, 5))
+    for idx, q_phi in enumerate(sorted(q_phi_values, reverse=True)):
+        sub = df_summary[df_summary["q_phi"] == q_phi].sort_values("q_psi", ascending=False)
+        a3.plot(
+            sub["q_psi"],
+            sub["selection_accuracy"] * 100.0,
+            marker=markers[idx % len(markers)],
+            linewidth=2,
+            label=rf"Sensing $q_{{\Phi}}={q_phi:.2f}$",
+            color=colors[idx],
+        )
+    a3.set_xscale("log")
+    a3.set_xlabel(r"Validation Matrix Density $q_{\Psi}$ (log scale)", fontsize=11, fontweight="bold")
+    a3.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
+    a3.set_title(r"Validation Sparsity Tolerance Across Sensing Densities", fontsize=12, fontweight="bold")
+    a3.grid(True, which="both", linestyle="--", alpha=0.4)
+    a3.legend(fontsize=9, loc="lower left")
+    a3.set_ylim(20, 105)
+    fig3.tight_layout()
+    fig3.savefig(os.path.join(output_dir, "p8_3_sparsity_tolerance.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig3)
+
+    # Panel 4 standalone
+    fig4, a4 = plt.subplots(figsize=(7, 5))
+    b1_s = a4.bar(x_vals - width, oracle_by_phi.values, width, label=r"Oracle Error $\varepsilon_{\mathrm{or}}$", color="#2b5c8f", alpha=0.85)
+    b2_s = a4.bar(x_vals, excess_by_phi_dense.loc[oracle_by_phi.index].values, width, label=rf"Excess Error ($q_{{\Psi}}={q_psi_max:.2f}$)", color="#3caea3", alpha=0.85)
+    b3_s = a4.bar(x_vals + width, excess_by_phi_sparse.loc[oracle_by_phi.index].values, width, label=rf"Excess Error ($q_{{\Psi}}={q_psi_min:.2f}$)", color="#ed553b", alpha=0.85)
+    for bar in list(b1_s) + list(b2_s) + list(b3_s):
+        h = bar.get_height()
+        if h > 0:
+            a4.text(bar.get_x() + bar.get_width() / 2.0, h * 1.15, f"{h:.2f}" if h < 10 else f"{h:.1f}",
+                    ha="center", va="bottom", fontsize=7.5, fontweight="bold")
+    a4.set_xticks(x_vals)
+    a4.set_xticklabels([f"{q:.2f}" for q in oracle_by_phi.index], fontsize=10)
+    a4.set_xlabel(r"Sensing Matrix Density $q_{\Phi}$", fontsize=11, fontweight="bold")
+    a4.set_ylabel(r"Mean Squared Error (log scale)", fontsize=11, fontweight="bold")
+    a4.set_yscale("log")
+    a4.set_ylim(0.08, 600)
+    a4.set_title(r"Oracle Error $\varepsilon_{\mathrm{or}}$ vs Excess Error $\varepsilon_x^{\hat{n}} - \varepsilon_x^{n^*}$", fontsize=12, fontweight="bold")
+    a4.grid(True, which="both", axis="y", linestyle="--", alpha=0.4)
+    a4.legend(fontsize=8.5, loc="upper right")
+    fig4.tight_layout()
+    fig4.savefig(os.path.join(output_dir, "p8_4_oracle_vs_excess.png"), dpi=200, bbox_inches="tight")
+    plt.close(fig4)
 
 
 def main():

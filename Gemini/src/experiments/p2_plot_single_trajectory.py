@@ -66,6 +66,7 @@ def run_and_plot_single_trajectory(
     p = traj.p
     iterations = np.arange(p + 1)
     j_true_star = int(np.argmin(E_true))
+    omp_residual = np.sum(traj.residuals ** 2, axis=1)
 
     # 3. Validation Projections
     # a. Dense Gaussian
@@ -88,6 +89,7 @@ def run_and_plot_single_trajectory(
     df_trajectory = pd.DataFrame({
         "iteration": iterations,
         "true_error": E_true,
+        "omp_residual": omp_residual,
         "error_sparsity": traj.error_sparsities,
         "cv_gauss": E_hat_gauss,
         "cv_rademacher": E_hat_rad,
@@ -97,11 +99,9 @@ def run_and_plot_single_trajectory(
         "rel_err_sparse": relative_norm_errors(E_true, E_hat_sparse),
     })
 
-    csv_path = os.path.join(output_dir, "single_trajectory_data.csv")
-    df_trajectory.to_csv(csv_path, index=False)
-
     # 5. Evaluate summary metrics
     models = [
+        ("OMP Residual (Training)", omp_residual),
         ("Dense Gaussian", E_hat_gauss),
         ("Dense Rademacher", E_hat_rad),
         (f"Sparse Rademacher (q={q})", E_hat_sparse),
@@ -123,31 +123,31 @@ def run_and_plot_single_trajectory(
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [2.5, 1]})
 
     # Top panel: Error curves
-    ax1.semilogy(iterations, E_true, color="black", linestyle="-", marker="o", linewidth=2.5, label=r"True Error $E_j = \|\mathbf{x} - \mathbf{x}^j\|_2^2$")
-    ax1.semilogy(iterations, E_hat_gauss, color="royalblue", linestyle="--", marker="s", alpha=0.85, label=r"Dense Gaussian $\widehat{E}_j$")
-    ax1.semilogy(iterations, E_hat_rad, color="forestgreen", linestyle=":", marker="d", alpha=0.85, label=r"Dense Rademacher $\widehat{E}_j$")
-    ax1.semilogy(iterations, E_hat_sparse, color="crimson", linestyle="-.", marker="^", alpha=0.85, label=f"Sparse Rademacher ($q={q}$) " + r"$\widehat{E}_j$")
+    ax1.semilogy(iterations, E_true, color="black", linestyle="-", marker="o", linewidth=2.5, label=r"Real Error $\varepsilon_x^n = \|\mathbf{x} - \mathbf{x}^n\|_2^2$")
+    ax1.semilogy(iterations, omp_residual, color="darkorange", linestyle=":", marker="x", linewidth=2.0, alpha=0.9, label=r"OMP Residual $\|\mathbf{r}^n\|_2^2 = \|\mathbf{y} - \mathbf{\Phi} \mathbf{x}^n\|_2^2$")
+    ax1.semilogy(iterations, E_hat_gauss, color="royalblue", linestyle="--", marker="s", alpha=0.85, label=r"Dense Gaussian $\varepsilon_{\mathrm{cv}}^n$")
+    ax1.semilogy(iterations, E_hat_rad, color="forestgreen", linestyle=":", marker="d", alpha=0.85, label=r"Dense Rademacher $\varepsilon_{\mathrm{cv}}^n$")
+    ax1.semilogy(iterations, E_hat_sparse, color="crimson", linestyle="-.", marker="^", alpha=0.85, label=rf"Sparse Rademacher ($q={q}$) $\varepsilon_{{\mathrm{{cv}}}}^n$")
 
-    ax1.axvline(j_true_star, color="black", linestyle="--", alpha=0.5, label=f"True optimal $j^*={j_true_star}$")
+    ax1.axvline(j_true_star, color="black", linestyle="--", alpha=0.5, label=f"Oracle optimal $n^*={j_true_star}$")
     ax1.set_ylabel(r"Squared Error ($\ell_2^2$)", fontsize=11)
-    ax1.set_title(f"True Error vs Cross-Validation Estimates along OMP Trajectory\n(N={N}, s={s}, m={m}, r={r}, SNR={snr_db} dB, sparse density q={q})", fontsize=12)
+    ax1.set_title(f"Single Trajectory: Real Error $\\varepsilon_x^n$, OMP Residual $\\|\\mathbf{{r}}^n\\|_2^2$ & CV Estimates $\\varepsilon_{{\\mathrm{{cv}}}}^n$\n(N={N}, s={s}, m={m}, r={r}, SNR={snr_db} dB, sparse density q={q})", fontsize=12)
     ax1.grid(True, which="both", linestyle="--", alpha=0.4)
     ax1.legend(loc="upper right", fontsize=10)
 
-    # Bottom panel: Error vector sparsity ||x - x^j||_0
-    ax2.plot(iterations, traj.error_sparsities, color="purple", marker="o", linestyle="-", label=r"$\|\mathbf{x} - \mathbf{x}^j\|_0$")
-    ax2.plot(iterations, s + iterations, color="gray", linestyle=":", label=r"Theoretical bound $s + j$")
-    ax2.set_xlabel("OMP Iteration $j$", fontsize=11)
+    # Bottom panel: Error vector sparsity ||x - x^n||_0
+    ax2.plot(iterations, traj.error_sparsities, color="purple", marker="o", linestyle="-", label=r"$\|\mathbf{x} - \mathbf{x}^n\|_0$")
+    ax2.plot(iterations, s + iterations, color="gray", linestyle=":", label=r"Theoretical bound $s + n$")
+    ax2.set_xlabel("OMP Iteration $n$", fontsize=11)
     ax2.set_ylabel(r"Error Sparsity", fontsize=11)
     ax2.grid(True, linestyle="--", alpha=0.4)
     ax2.legend(loc="upper left", fontsize=10)
 
     plt.tight_layout()
-    plot_path = os.path.join(output_dir, "single_trajectory.png")
+    plot_path = os.path.join(output_dir, "p2_single_trajectory.png")
     plt.savefig(plot_path, dpi=200)
     plt.close()
-    print(f"Saved trajectory plot to: {plot_path}")
-    print(f"Saved trajectory data to: {csv_path}\n")
+    print(f"Saved trajectory plot to: {plot_path}\n")
 
     return df_trajectory
 

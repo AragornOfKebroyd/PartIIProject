@@ -196,10 +196,10 @@ def run_budget_experiments(
     df_fixed_nnz_summary = pd.DataFrame(summary_nnz_list)
 
     # Save CSVs
-    fixed_r_csv = os.path.join(output_dir, "budget_fixed_r_summary.csv")
-    fixed_nnz_csv = os.path.join(output_dir, "budget_fixed_nnz_summary.csv")
-    df_fixed_r_summary.to_csv(fixed_r_csv, index=False)
-    df_fixed_nnz_summary.to_csv(fixed_nnz_csv, index=False)
+    # fixed_r_csv = os.path.join(output_dir, "budget_fixed_r_summary.csv")
+    # fixed_nnz_csv = os.path.join(output_dir, "budget_fixed_nnz_summary.csv")
+    # df_fixed_r_summary.to_csv(fixed_r_csv, index=False)
+    # df_fixed_nnz_summary.to_csv(fixed_nnz_csv, index=False)
 
     print("\n" + "=" * 90)
     print("STAGE 5 SUMMARY: FIXED-NNZ COMPARISON (IS A WIDE-AND-SPARSE MATRIX BETTER?)")
@@ -274,13 +274,13 @@ def run_budget_experiments(
     ax_nnz_tau.legend(fontsize=9, loc="lower right")
 
     fig.subplots_adjust(left=0.07, right=0.95, top=0.93, bottom=0.08, hspace=0.30, wspace=0.25)
-    plot_path = os.path.join(output_dir, "budget_matched_comparison.png")
+    plot_path = os.path.join(output_dir, "p5_budget_matched_comparison.png")
     plt.savefig(plot_path, dpi=200)
     plt.close()
 
     print(f"\nSaved budget-matched visualization to: {plot_path}")
-    print(f"Saved Fixed-r summary to: {fixed_r_csv}")
-    print(f"Saved Fixed-nnz summary to: {fixed_nnz_csv}\n")
+    # print(f"Saved Fixed-r summary to: {fixed_r_csv}")
+    # print(f"Saved Fixed-nnz summary to: {fixed_nnz_csv}\n")
 
     return df_fixed_r_summary, df_fixed_nnz_summary, df_fixed_nnz_trials
 
