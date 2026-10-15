@@ -2,4 +2,5 @@ venv/
 .vscode/
 Gemini/output/
 __pycache__/
+pdfs/
 *.csv
