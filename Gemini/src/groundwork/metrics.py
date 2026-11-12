@@ -139,12 +139,16 @@ def best_iterate_selection(
     selected_true_error = float(E_true[j_hat_star])
 
     excess_error = (selected_true_error - true_min_error) / max(true_min_error, eps)
-    # TODO: could add more things here for example, the absolute error difference, or number of indicies away from the true optimum, etc.
+    oracle_error_ratio = selected_true_error / max(true_min_error, eps)
+
     return {
         "j_true_star": j_true_star,
         "j_hat_star": j_hat_star,
         "is_exact_match": bool(j_true_star == j_hat_star),
         "excess_error": float(excess_error),
+        "oracle_error_ratio": float(oracle_error_ratio),
+        "selected_true_error": selected_true_error,
+        "true_min_error": true_min_error,
     }
 
 

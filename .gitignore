@@ -1,6 +1,7 @@
 venv/
 .vscode/
 Gemini/output/
+SuiteSparse/
 __pycache__/
 pdfs/
 *.csv

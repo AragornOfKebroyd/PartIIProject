@@ -64,7 +64,8 @@ def compare_matrix_families(
       - Distortion variance sigma ~ sqrt((2 + gamma)/r) (Zhang et al.)
     """
     if r_values is None:
-        r_values = [10, 15, 20, 30, 40, 60, 80, 100]
+        # Densely sampled near the change point (10 <= r <= 40)
+        r_values = [10, 12, 15, 18, 20, 25, 30, 35, 40, 50, 60, 80, 100]
 
     if output_dir is None:
         output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "output"))
@@ -144,6 +145,7 @@ def compare_matrix_families(
                     "is_exact_match": sel["is_exact_match"],
                     "is_near_match": near_match,
                     "excess_error": sel["excess_error"],
+                    "oracle_error_ratio": sel["oracle_error_ratio"],
                 })
 
     df_trials = pd.DataFrame(all_trial_records)
@@ -175,6 +177,8 @@ def compare_matrix_families(
                 "Selection_Accuracy": float(sub["is_exact_match"].mean()),
                 "Near_Selection_Accuracy": float(sub["is_near_match"].mean()),
                 "Mean_Excess_Error": float(sub["excess_error"].mean()),
+                "Median_Oracle_Error_Ratio": float(sub["oracle_error_ratio"].median()),
+                "Mean_Oracle_Error_Ratio": float(sub["oracle_error_ratio"].mean()),
             })
 
     df_summary = pd.DataFrame(summary_rows)
@@ -238,31 +242,33 @@ def compare_matrix_families(
     plt.close(fig_dist)
 
     # -------------------------------------------------------------------------
-    # Standalone Plot 4_2: Selection Accuracy P(n_hat == n*) vs Budget r (Clean: No Faint Lines)
+    # Standalone Plot 4_2: Oracle Error Ratio vs Budget r
     # -------------------------------------------------------------------------
     fig_acc, ax_a = plt.subplots(figsize=(8.5, 6))
     for key, name, _, _ in families:
         color, ls, m_mark = family_styles[key]
         sub = df_summary[df_summary["family_key"] == key]
-        # Clean solid curves only (no faint near-selection lines, no faint benchmark lines)
         ax_a.plot(
-            sub["r"], sub["Selection_Accuracy"] * 100,
+            sub["r"], sub["Mean_Oracle_Error_Ratio"],
             color=color, linestyle=ls, marker=m_mark, linewidth=2.4, markersize=8,
             label=name
         )
+    ax_a.axhline(1.0, color="gray", linestyle="--", linewidth=1.5, label="Ideal Oracle (1.00)")
 
+    ax_a.set_yscale("log")
     ax_a.set_xlabel("Validation Measurements Budget $r$", fontsize=12, fontweight="bold")
-    ax_a.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=12, fontweight="bold")
+    ax_a.set_ylabel(r"Mean Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ (log scale)", fontsize=12, fontweight="bold")
     ax_a.set_title(
-        r"$\bf{Selection\ Accuracy\ \mathbb{P}(\hat{n} = n^*)\ vs\ Validation\ Budget\ } r$" + "\n" + slide_subtitle,
+        r"$\bf{Oracle\ Error\ Ratio\ \frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}\ vs\ Validation\ Budget\ } r$" + "\n" + slide_subtitle,
         fontsize=11, pad=12
     )
-    ax_a.set_ylim(20, 104)
+    ax_a.set_ylim(0.90, 120)
     ax_a.grid(True, which="both", linestyle="--", alpha=0.35)
-    ax_a.legend(fontsize=9, loc="lower right", framealpha=0.92)
+    ax_a.legend(fontsize=9, loc="upper right", framealpha=0.92)
     fig_acc.tight_layout()
     p4_2_path = os.path.join(output_dir, "p4_2_selection_accuracy_vs_r.png")
     fig_acc.savefig(p4_2_path, dpi=200)
+    fig_acc.savefig(os.path.join(output_dir, "p4_2_oracle_ratio_vs_r.png"), dpi=200)
     # Backward compatible copy for p4_1_selection_accuracy_vs_r.png
     fig_acc.savefig(os.path.join(output_dir, "p4_1_selection_accuracy_vs_r.png"), dpi=200)
     plt.close(fig_acc)
@@ -341,17 +347,19 @@ def compare_matrix_families(
     ax_std.grid(True, which="both", linestyle="--", alpha=0.35)
     ax_std.legend(fontsize=8, loc="upper right")
 
-    # Panel 2 (Top-Right): Clean Best-Iterate Selection Accuracy vs r (No faint lines)
+    # Panel 2 (Top-Right): Oracle Error Ratio vs r
     for key, name, _, _ in families:
         color, ls, m_mark = family_styles[key]
         sub = df_summary[df_summary["family_key"] == key]
-        ax_acc.plot(sub["r"], sub["Selection_Accuracy"] * 100, color=color, linestyle=ls, marker=m_mark, linewidth=2.2, label=name)
+        ax_acc.plot(sub["r"], sub["Mean_Oracle_Error_Ratio"], color=color, linestyle=ls, marker=m_mark, linewidth=2.2, label=name)
+    ax_acc.axhline(1.0, color="gray", linestyle="--", linewidth=1.5, label="Ideal Oracle (1.00)")
+    ax_acc.set_yscale("log")
     ax_acc.set_xlabel("Validation Measurements $r$", fontsize=11, fontweight="bold")
-    ax_acc.set_ylabel(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
-    ax_acc.set_ylim(20, 105)
-    ax_acc.set_title(r"Model Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ vs Budget $r$", fontsize=11, fontweight="bold")
+    ax_acc.set_ylabel(r"Mean Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ (log scale)", fontsize=11, fontweight="bold")
+    ax_acc.set_ylim(0.90, 120)
+    ax_acc.set_title(r"Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ vs Budget $r$", fontsize=11, fontweight="bold")
     ax_acc.grid(True, which="both", linestyle="--", alpha=0.35)
-    ax_acc.legend(fontsize=8, loc="lower right")
+    ax_acc.legend(fontsize=8, loc="upper right")
 
     # Panel 3 (Bottom-Left): Kendall's Tau vs r
     for key, name, _, _ in families:

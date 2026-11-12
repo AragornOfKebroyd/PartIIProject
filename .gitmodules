@@ -1,4 +1,8 @@
 [submodule "sim"]
-	path = sim
-	url = git@github.com:AragornOfKebroyd/PartIIProjectSim.git
+    path = sim
+    url = git@github.com:AragornOfKebroyd/PartIIProjectSim.git
+    branch = main
+[submodule "OverleadDiss"]
+	path = OverleadDiss
+	url = https://git@git.overleaf.com/6af5b00ce7a9c33ae775e5ee
 	branch = main

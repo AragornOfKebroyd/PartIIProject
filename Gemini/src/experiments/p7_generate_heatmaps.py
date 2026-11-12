@@ -16,6 +16,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 # Ensure src modules can be imported
 SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -54,8 +55,8 @@ def run_heatmap_grid(
     Run 2D grid sweep over (q, r) and compute phase transition statistics.
     """
     if q_values is None:
-        # Doubled resolution across matrix density q: 14 logarithmically spaced points
-        q_values = [1.0, 0.70, 0.50, 0.35, 0.25, 0.18, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02, 0.014, 0.01]
+        # Densely sampled across matrix density q, down to change point (0.003 <= q <= 1.0)
+        q_values = [1.0, 0.70, 0.50, 0.35, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03, 0.02, 0.014, 0.01, 0.007, 0.005, 0.003]
     if r_values is None:
         # Doubled resolution across validation measurements budget r: 18 points
         r_values = [10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
@@ -102,6 +103,7 @@ def run_heatmap_grid(
             concordances = []
             pre_rels = []
             excesses = []
+            oracle_ratios = []
 
             for t, (x_true, traj, sigma_n) in enumerate(problems):
                 rng_val = np.random.default_rng(base_seed + 100000 * r + int(q * 10000) + t)
@@ -121,6 +123,7 @@ def run_heatmap_grid(
                 concordances.append(conc)
                 pre_rels.append(float(np.median(pre_rel)))
                 excesses.append(sel["excess_error"])
+                oracle_ratios.append(sel["oracle_error_ratio"])
 
             grid_results.append({
                 "r": r,
@@ -134,6 +137,8 @@ def run_heatmap_grid(
                 "mean_concordance": float(np.mean(concordances)),
                 "pre_conv_rel_error_med": float(np.median(pre_rels)),
                 "mean_excess_error": float(np.mean(excesses)),
+                "median_oracle_error_ratio": float(np.median(oracle_ratios)),
+                "mean_oracle_error_ratio": float(np.mean(oracle_ratios)),
             })
 
             if cell_idx % 25 == 0 or cell_idx == total_cells:
@@ -148,41 +153,42 @@ def run_heatmap_grid(
     pivot_near = df_grid.pivot(index="r", columns="q", values="near_selection_accuracy") * 100
     pivot_tau = df_grid.pivot(index="r", columns="q", values="mean_kendall_tau")
     pivot_rel = df_grid.pivot(index="r", columns="q", values="pre_conv_rel_error_med")
+    pivot_ratio = df_grid.pivot(index="r", columns="q", values="median_oracle_error_ratio")
 
-    q_arr = np.array(q_values)
-    r_arr = np.array(r_values)
+    q_arr = np.array(pivot_acc.columns)
+    r_arr = np.array(pivot_acc.index)
     Q, R = np.meshgrid(q_arr, r_arr)
 
     # -------------------------------------------------------------------------
-    # Figure 1: 2-Panel Selection Accuracy & Near Selection Heatmaps
+    # Figure 1: 2-Panel Oracle Error Ratio & Selection Accuracy Heatmaps
     # -------------------------------------------------------------------------
     fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
 
-    # Panel 1: Exact Best-Iterate Selection Accuracy
-    im1 = ax1.pcolormesh(Q, R, pivot_acc.values, cmap="viridis", shading="auto", vmin=30, vmax=100, edgecolors="none")
+    # Panel 1: Median Oracle Error Ratio (Error of selected iterate / error of best iterate)
+    im1 = ax1.pcolormesh(Q, R, pivot_ratio.values, cmap="magma_r", shading="auto", norm=LogNorm(vmin=1.00, vmax=25.0), edgecolors="none")
     cbar1 = fig1.colorbar(im1, ax=ax1)
-    cbar1.set_label(r"Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
+    cbar1.set_label(r"Median Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ (log scale, $1.0 = \mathrm{Ideal\ Oracle}$)", fontsize=11, fontweight="bold")
     ax1.set_xscale("log")
     ax1.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
     ax1.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
-    ax1.set_title(r"Exact Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ Phase Transition", fontsize=12, fontweight="bold")
+    ax1.set_title(r"Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ Phase Transition", fontsize=12, fontweight="bold")
     ax1.grid(False)
 
-    # Panel 2: Near Match Selection Accuracy (within +/- 1 iterate)
-    im2 = ax2.pcolormesh(Q, R, pivot_near.values, cmap="viridis", shading="auto", vmin=50, vmax=100, edgecolors="none")
+    # Panel 2: Exact Best-Iterate Selection Accuracy
+    im2 = ax2.pcolormesh(Q, R, pivot_acc.values, cmap="viridis", shading="auto", vmin=30, vmax=100, edgecolors="none")
     cbar2 = fig1.colorbar(im2, ax=ax2)
-    cbar2.set_label(r"Near Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ (%)", fontsize=11, fontweight="bold")
+    cbar2.set_label(r"Exact Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=11, fontweight="bold")
     ax2.set_xscale("log")
     ax2.set_xlabel("Matrix Density $q$ (log scale)", fontsize=11, fontweight="bold")
     ax2.set_ylabel("Validation Measurements Budget $r$", fontsize=11, fontweight="bold")
-    ax2.set_title(r"Near-Optimal Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$", fontsize=12, fontweight="bold")
+    ax2.set_title(r"Exact Model Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ (%)", fontsize=12, fontweight="bold")
     ax2.grid(False)
 
     fig1.subplots_adjust(left=0.07, right=0.95, top=0.92, bottom=0.12, wspace=0.25)
     fig1_path = os.path.join(output_dir, "p7_heatmap_selection_accuracy.png")
     fig1.savefig(fig1_path, dpi=200)
     plt.close(fig1)
-    print(f"Saved Selection Accuracy Heatmap to: {fig1_path}")
+    print(f"Saved Selection Accuracy / Oracle Ratio Heatmap to: {fig1_path}")
 
     # -------------------------------------------------------------------------
     # Figure 2: 2-Panel Kendall's Tau & Pre-convergence Relative Error
@@ -217,23 +223,38 @@ def run_heatmap_grid(
     # Standalone Individual Heatmaps (Single Panel per Metric)
     # -------------------------------------------------------------------------
     standalone_specs = [
+        ("p7_1_oracle_error_ratio_heatmap.png", pivot_ratio.values, "magma_r", 1.00, 25.0,
+         r"Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ Phase Transition",
+         r"Median Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ (log scale)", True),
         ("p7_1_selection_accuracy_heatmap.png", pivot_acc.values, "viridis", 30, 100,
          r"Exact Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$ Phase Transition",
-         r"Selection Accuracy $\mathbb{P}(\hat{n}=n^*)$ (%)"),
+         r"Selection Accuracy $\mathbb{P}(\hat{n}=n^*)$ (%)", False),
         ("p7_2_near_selection_heatmap.png", pivot_near.values, "viridis", 50, 100,
          r"Near-Optimal Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ Phase Transition",
-         r"Near Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ (%)"),
+         r"Near Selection Accuracy $\mathbb{P}(|\hat{n} - n^*| \leq 1)$ (%)", False),
         ("p7_3_kendall_tau_heatmap.png", pivot_tau.values, "plasma", 0.70, 1.0,
          r"Ordering Preservation (Mean Kendall's $\tau$) Operational Regime",
-         r"Mean Kendall's $\tau$ (between $[\varepsilon_x^n]$ and $[\varepsilon_{\mathrm{cv}}^n]$)"),
+         r"Mean Kendall's $\tau$ (between $[\varepsilon_x^n]$ and $[\varepsilon_{\mathrm{cv}}^n]$)", False),
         ("p7_4_norm_error_heatmap.png", pivot_rel.values, "magma_r", 0.10, 0.70,
          r"Signal Norm Estimation Relative Error ($n \leq n^*$)",
-         r"Median Relative Error $\frac{|\varepsilon_{\mathrm{cv}}^n - \varepsilon_x^n|}{\varepsilon_x^n}$"),
+         r"Median Relative Error $\frac{|\varepsilon_{\mathrm{cv}}^n - \varepsilon_x^n|}{\varepsilon_x^n}$", False),
     ]
 
-    for fname, data_vals, cmap_name, vmin_val, vmax_val, title_str, cbar_str in standalone_specs:
+    for item in standalone_specs:
+        fname = item[0]
+        data_vals = item[1]
+        cmap_name = item[2]
+        vmin_val = item[3]
+        vmax_val = item[4]
+        title_str = item[5]
+        cbar_str = item[6]
+        use_log = len(item) > 7 and item[7]
+
         fig_s, ax_s = plt.subplots(figsize=(8.5, 6.5))
-        im_s = ax_s.pcolormesh(Q, R, data_vals, cmap=cmap_name, shading="auto", vmin=vmin_val, vmax=vmax_val, edgecolors="none")
+        if use_log:
+            im_s = ax_s.pcolormesh(Q, R, data_vals, cmap=cmap_name, shading="auto", norm=LogNorm(vmin=vmin_val, vmax=vmax_val), edgecolors="none")
+        else:
+            im_s = ax_s.pcolormesh(Q, R, data_vals, cmap=cmap_name, shading="auto", vmin=vmin_val, vmax=vmax_val, edgecolors="none")
         cbar_s = fig_s.colorbar(im_s, ax=ax_s)
         cbar_s.set_label(cbar_str, fontsize=11, fontweight="bold")
         ax_s.set_xscale("log")
@@ -244,9 +265,6 @@ def run_heatmap_grid(
         fig_s.tight_layout()
         s_path = os.path.join(output_dir, fname)
         fig_s.savefig(s_path, dpi=200)
-        plt.close(fig_s)
-        print(f"Saved standalone heatmap: {s_path}")
-
     return df_grid
 
 

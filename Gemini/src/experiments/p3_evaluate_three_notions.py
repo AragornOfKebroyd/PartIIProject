@@ -56,7 +56,11 @@ def evaluate_three_notions(
     Sweep sparsity density q across multiple trials and measure the refined notions.
     """
     if q_values is None:
-        q_values = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005]
+        # Densely sampled near the change point (0.002 <= q <= 0.05)
+        q_values = [
+            1.0, 0.5, 0.2, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.025, 0.02,
+            0.015, 0.012, 0.01, 0.008, 0.006, 0.005, 0.004, 0.003, 0.002, 0.001, 0.0005
+        ]
 
     if output_dir is None:
         output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "output"))
@@ -115,6 +119,7 @@ def evaluate_three_notions(
             "exact_match": sel["is_exact_match"],
             "near_match": abs(sel["j_hat_star"] - sel["j_true_star"]) <= 1,
             "excess_err": sel["excess_error"],
+            "oracle_error_ratio": sel["oracle_error_ratio"],
         })
     df_gauss = pd.DataFrame(gauss_records)
     gauss_summary = {
@@ -130,6 +135,8 @@ def evaluate_three_notions(
         "conc": float(df_gauss["conc"].mean()),
         "acc": float(df_gauss["exact_match"].mean()),
         "near_acc": float(df_gauss["near_match"].mean()),
+        "oracle_error_ratio": float(df_gauss["oracle_error_ratio"].median()),
+        "mean_oracle_error_ratio": float(df_gauss["oracle_error_ratio"].mean()),
     }
 
     # Sweep over density q
@@ -181,6 +188,7 @@ def evaluate_three_notions(
                 "is_exact_match": sel["is_exact_match"],
                 "is_near_match": near_match,
                 "excess_error": sel["excess_error"],
+                "oracle_error_ratio": sel["oracle_error_ratio"],
             })
 
     df_trials = pd.DataFrame(all_trial_records)
@@ -219,6 +227,8 @@ def evaluate_three_notions(
             "Near_Selection_Accuracy": float(sub["is_near_match"].mean()),
             "Mean_Excess_Error": float(sub["excess_error"].mean()),
             "Median_Excess_Error": float(sub["excess_error"].median()),
+            "Median_Oracle_Error_Ratio": float(sub["oracle_error_ratio"].median()),
+            "Mean_Oracle_Error_Ratio": float(sub["oracle_error_ratio"].mean()),
         })
 
     df_summary = pd.DataFrame(summary_rows)
@@ -281,21 +291,24 @@ def evaluate_three_notions(
     fig2.savefig(p2_path, dpi=200)
     plt.close(fig2)
 
-    # 3. Graph 3c: Measures 3 & 4 - Model Selection Accuracy P(n^ = n*)
-    fig3, ax3 = plt.subplots(figsize=(8, 5.5))
-    ax3.plot(df_summary["q"], df_summary["Selection_Accuracy"] * 100, "o-", color="darkblue", linewidth=2.2, label=r"Exact Selection $\mathbb{P}(\hat{n} = n^*)$")
-    ax3.plot(df_summary["q"], df_summary["Near_Selection_Accuracy"] * 100, "d--", color="royalblue", linewidth=2.0, label=r"Near Selection $\mathbb{P}(|\hat{n} - n^*| \leq 1)$")
-    ax3.axhline(gauss_summary["acc"] * 100, color="darkblue", linestyle=":", alpha=0.7, label=f"Dense Gaussian Exact Match ({gauss_summary['acc']*100:.1f}%)")
+    # 3. Graph 3c: Measure 3 - Oracle Error Ratio (Error of selected iterate / error of best iterate)
+    fig3, ax3 = plt.subplots(figsize=(8.5, 5.8))
+    ax3.plot(df_summary["q"], df_summary["Median_Oracle_Error_Ratio"], "o-", color="darkblue", linewidth=2.4, markersize=6, label=r"Median Oracle Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$")
+    ax3.plot(df_summary["q"], df_summary["Mean_Oracle_Error_Ratio"], "s--", color="crimson", linewidth=2.0, markersize=5, label=r"Mean Oracle Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$")
+    ax3.axhline(gauss_summary["oracle_error_ratio"], color="purple", linestyle=":", linewidth=2.0, label=f"Dense Gaussian Median ({gauss_summary['oracle_error_ratio']:.3f})")
+    ax3.axhline(1.0, color="gray", linestyle="--", linewidth=1.5, label="Ideal Oracle (1.00)")
     ax3.set_xscale("log")
-    ax3.set_xlabel(r"Matrix Density $q$ (probability of non-zero entry, log scale)", fontsize=11)
-    ax3.set_ylabel(r"Selection Accuracy (%)", fontsize=11)
-    ax3.set_ylim(-2, 105)
-    ax3.set_title(r"Measures 3 & 4: Best-Iterate Selection Accuracy vs Density $q$" + f"  [Validation Budget $r={r}$]\n" + r"Oracle Minimizer $n^*$ vs Cross-Validation Minimizer $\hat{n}$", fontsize=12, fontweight="bold")
-    ax3.grid(True, which="both", linestyle="--", alpha=0.4)
-    ax3.legend(fontsize=9.5, loc="lower right")
+    ax3.set_yscale("log")
+    ax3.set_xlabel(r"Matrix Density $q$ (probability of non-zero entry, log scale)", fontsize=11, fontweight="bold")
+    ax3.set_ylabel(r"Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ (log scale)", fontsize=11, fontweight="bold")
+    ax3.set_ylim(0.85, 5000)
+    ax3.set_title(r"Measure 3: Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ vs Matrix Density $q$" + f"  [Validation Budget $r={r}$]\n" + r"Error of Selected Iterate $\hat{n}$ divided by Error of Best Iterate $n^*$", fontsize=12, fontweight="bold")
+    ax3.grid(True, which="both", linestyle="--", alpha=0.35)
+    ax3.legend(fontsize=9.5, loc="upper right")
     fig3.tight_layout()
     p3_path = os.path.join(output_dir, "p3_3_selection_accuracy.png")
     fig3.savefig(p3_path, dpi=200)
+    fig3.savefig(os.path.join(output_dir, "p3_3_oracle_error_ratio.png"), dpi=200)
     plt.close(fig3)
 
     # 4. Graph 3d: The Hierarchy of Validation Requirements (Absolute Performance Rates)
@@ -347,17 +360,19 @@ def evaluate_three_notions(
     axes[0, 1].grid(True, which="both", linestyle="--", alpha=0.4)
     axes[0, 1].legend(fontsize=8.5)
 
-    # Bottom-Left: Measures 3 & 4 Selection Accuracy
-    axes[1, 0].plot(df_summary["q"], df_summary["Selection_Accuracy"] * 100, "o-", color="darkblue", linewidth=2.2, label=r"Exact $\mathbb{P}(\hat{n} = n^*)$")
-    axes[1, 0].plot(df_summary["q"], df_summary["Near_Selection_Accuracy"] * 100, "d--", color="royalblue", linewidth=2.0, label=r"Near $\mathbb{P}(|\hat{n} - n^*| \leq 1)$")
-    axes[1, 0].axhline(gauss_summary["acc"] * 100, color="darkblue", linestyle=":", alpha=0.6, label="Dense Gauss")
+    # Bottom-Left: Measure 3 Oracle Error Ratio
+    axes[1, 0].plot(df_summary["q"], df_summary["Median_Oracle_Error_Ratio"], "o-", color="darkblue", linewidth=2.2, label=r"Median $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$")
+    axes[1, 0].plot(df_summary["q"], df_summary["Mean_Oracle_Error_Ratio"], "s--", color="crimson", linewidth=1.8, label=r"Mean $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$")
+    axes[1, 0].axhline(gauss_summary["oracle_error_ratio"], color="purple", linestyle=":", alpha=0.8, label="Dense Gauss")
+    axes[1, 0].axhline(1.0, color="gray", linestyle="--", alpha=0.7, label="Ideal Oracle (1.00)")
     axes[1, 0].set_xscale("log")
-    axes[1, 0].set_xlabel(r"Matrix Density $q$", fontsize=10)
-    axes[1, 0].set_ylabel("Selection Accuracy (%)", fontsize=10)
-    axes[1, 0].set_ylim(-2, 105)
-    axes[1, 0].set_title(r"3 & 4. Selection Accuracy $\mathbb{P}(\hat{n} = n^*)$", fontsize=11, fontweight="bold")
-    axes[1, 0].grid(True, which="both", linestyle="--", alpha=0.4)
-    axes[1, 0].legend(fontsize=8.5)
+    axes[1, 0].set_yscale("log")
+    axes[1, 0].set_xlabel(r"Matrix Density $q$", fontsize=10, fontweight="bold")
+    axes[1, 0].set_ylabel(r"Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$ (log scale)", fontsize=10, fontweight="bold")
+    axes[1, 0].set_ylim(0.85, 5000)
+    axes[1, 0].set_title(r"3. Oracle Error Ratio $\frac{\varepsilon_x^{\hat{n}}}{\varepsilon_x^{n^*}}$", fontsize=11, fontweight="bold")
+    axes[1, 0].grid(True, which="both", linestyle="--", alpha=0.35)
+    axes[1, 0].legend(fontsize=8.0, loc="upper right")
 
     # Bottom-Right: The Hierarchy (Absolute Success Rates)
     axes[1, 1].plot(df_summary["q"], df_summary["Selection_Accuracy"] * 100, "o-", color="darkblue", linewidth=2.2, label=r"Level 4: Selection $\mathbb{P}(\hat{n}=n^*)$")
